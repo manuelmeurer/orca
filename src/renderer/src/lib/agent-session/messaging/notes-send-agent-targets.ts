@@ -14,6 +14,7 @@ import {
   deriveStatuslessStructuredAgentSendTargets,
   hookSilentAgentSendRefusal,
   launchAgentMayOwnPane,
+  resolveForegroundAgentHint,
   runningAgentMessageTarget
 } from './running-agent-targets'
 import type { RunningAgentSendTarget, RunningAgentTargetState } from './running-agent-targets'
@@ -28,12 +29,15 @@ export type NotesSendAgentTargetState = RunningAgentTargetState &
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
   status: 'eligible' | 'disabled'
   disabledReason?: string
 }
+
+const EMPTY_STRUCTURED_CHAT_TAB_NAMES: StructuredChatTabNames = new Map()
 
 type AgentTitleEvidence = {
   status: NonNullable<ReturnType<typeof detectAgentSendTitleStatus>>
@@ -60,10 +64,14 @@ function detectTitleHintPaneEvidence(
 export function deriveNotesSendAgentTargets(
   state: NotesSendAgentTargetState,
   worktreeId: string,
-  chatNames: StructuredChatTabNames
+  chatNamesOrNow: StructuredChatTabNames | number = EMPTY_STRUCTURED_CHAT_TAB_NAMES,
+  now = Date.now()
 ): NotesSendAgentTarget[] {
+  const chatNames =
+    typeof chatNamesOrNow === 'number' ? EMPTY_STRUCTURED_CHAT_TAB_NAMES : chatNamesOrNow
+  const effectiveNow = typeof chatNamesOrNow === 'number' ? chatNamesOrNow : now
   const targets: NotesSendAgentTarget[] = [
-    ...deriveRunningAgentSendTargets(state, worktreeId),
+    ...deriveRunningAgentSendTargets(state, worktreeId, effectiveNow),
     ...deriveStatuslessStructuredAgentSendTargets(state, worktreeId)
   ].map((target) => {
     const tab = structuredChatTabById(state.unifiedTabsByWorktree, worktreeId, target.tabId)
@@ -98,6 +106,7 @@ function toNotesSendAgentTarget(
   return {
     paneKey: target.paneKey,
     tabId: target.tabId,
+    ...(target.kind === 'terminal' ? { leafId: target.leafId } : {}),
     messageTarget: runningAgentMessageTarget(target),
     agentType:
       target.kind === 'terminal'
@@ -136,29 +145,46 @@ function deriveTitleHintAgentTarget(
 
   const paneTitles = state.runtimePaneTitlesByTabId[tab.id]
   const paneTitleResolution = resolveRuntimePaneTitleLeafResolution(layout, paneTitles, leafId)
+  const paneKey = makePaneKey(tab.id, leafId)
   const titleEvidence = detectTitleHintPaneEvidence(paneTitleResolution, tab.title)
-  if (!titleEvidence) {
-    // Launch metadata can precede actual TUI startup; require current matching title evidence for discovery.
+  const foregroundAgent = resolveForegroundAgentHint(state, paneKey)
+  if (!titleEvidence && (hasPaneStatusEntry(state, paneKey) || !foregroundAgent)) {
+    // Launch metadata alone cannot replace a retained status row or prove a silent pane is live.
     return null
   }
   const agentType =
     (launchAgentMayOwnPane(tab, ptyId) ? tab.launchAgent : null) ??
-    resolveTerminalTitleAgentType(titleEvidence.title)
+    (titleEvidence ? resolveTerminalTitleAgentType(titleEvidence.title) : foregroundAgent)
   // Without the agent's own turn-end report, a title cannot rule out an approval menu its hooks hide.
   const disabledReason =
-    titleEvidence.status === 'permission'
+    titleEvidence?.status === 'permission'
       ? 'Agent needs permission'
-      : hookSilentAgentSendRefusal(state, tab, ptyId, null, titleEvidence.title)
+      : hookSilentAgentSendRefusal(
+          state,
+          tab,
+          ptyId,
+          null,
+          titleEvidence?.title ?? null,
+          foregroundAgent
+        )
 
   return {
-    paneKey: makePaneKey(tab.id, leafId),
+    paneKey,
     tabId: tab.id,
+    leafId,
     messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
     agentType,
     tabTitle: tab.title,
     status: disabledReason ? 'disabled' : 'eligible',
     ...(disabledReason ? { disabledReason } : {})
   }
+}
+
+function hasPaneStatusEntry(state: NotesSendAgentTargetState, paneKey: string): boolean {
+  const statuses = state.agentStatusByPaneKey
+  return typeof statuses.has === 'function'
+    ? statuses.has(paneKey)
+    : Object.hasOwn(statuses, paneKey)
 }
 
 // Agent-state refusals come from the agent's own reports; a title cannot clear them.
