@@ -12,8 +12,10 @@ import type { RuntimePaneTitleLeafResolution } from '../../../../../shared/works
 import {
   deriveRunningAgentSendTargets,
   deriveStatuslessStructuredAgentSendTargets,
+  getRunningAgentStatusEntry,
   hookSilentAgentSendRefusal,
   launchAgentMayOwnPane,
+  resolveSendTargetForegroundAgent,
   runningAgentMessageTarget
 } from './running-agent-targets'
 import type { RunningAgentSendTarget, RunningAgentTargetState } from './running-agent-targets'
@@ -28,6 +30,7 @@ export type NotesSendAgentTargetState = RunningAgentTargetState &
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
@@ -60,15 +63,21 @@ function detectTitleHintPaneEvidence(
 export function deriveNotesSendAgentTargets(
   state: NotesSendAgentTargetState,
   worktreeId: string,
-  chatNames: StructuredChatTabNames
+  chatNamesOrNow?: StructuredChatTabNames | number,
+  now = Date.now()
 ): NotesSendAgentTarget[] {
+  const chatNames = typeof chatNamesOrNow === 'number' ? undefined : chatNamesOrNow
+  const targetNow = typeof chatNamesOrNow === 'number' ? chatNamesOrNow : now
   const targets: NotesSendAgentTarget[] = [
-    ...deriveRunningAgentSendTargets(state, worktreeId),
+    ...deriveRunningAgentSendTargets(state, worktreeId, targetNow),
     ...deriveStatuslessStructuredAgentSendTargets(state, worktreeId)
   ].map((target) => {
-    const tab = structuredChatTabById(state.unifiedTabsByWorktree, worktreeId, target.tabId)
+    const tab =
+      target.kind === 'structured-session'
+        ? structuredChatTabById(state.unifiedTabsByWorktree, worktreeId, target.tabId)
+        : undefined
     const title =
-      target.kind === 'structured-session' && tab?.entityId === target.sessionId
+      target.kind === 'structured-session' && tab?.entityId === target.sessionId && chatNames
         ? projectedStructuredChatTabName(tab, chatNames)
         : undefined
     return toNotesSendAgentTarget(target, title)
@@ -98,6 +107,7 @@ function toNotesSendAgentTarget(
   return {
     paneKey: target.paneKey,
     tabId: target.tabId,
+    ...(target.kind === 'terminal' ? { leafId: target.leafId } : {}),
     messageTarget: runningAgentMessageTarget(target),
     agentType:
       target.kind === 'terminal'
@@ -137,9 +147,28 @@ function deriveTitleHintAgentTarget(
   const paneTitles = state.runtimePaneTitlesByTabId[tab.id]
   const paneTitleResolution = resolveRuntimePaneTitleLeafResolution(layout, paneTitles, leafId)
   const titleEvidence = detectTitleHintPaneEvidence(paneTitleResolution, tab.title)
+  const paneKey = makePaneKey(tab.id, leafId)
   if (!titleEvidence) {
-    // Launch metadata can precede actual TUI startup; require current matching title evidence for discovery.
-    return null
+    if (getRunningAgentStatusEntry(state, paneKey)) {
+      return null
+    }
+    const foregroundAgent = resolveSendTargetForegroundAgent(state, paneKey, ptyId)
+    if (!foregroundAgent) {
+      return null
+    }
+    const agentType =
+      (launchAgentMayOwnPane(tab, ptyId) ? tab.launchAgent : null) ?? foregroundAgent
+    const disabledReason = hookSilentAgentSendRefusal(state, tab, ptyId, null, paneKey, null)
+    return {
+      paneKey,
+      tabId: tab.id,
+      leafId,
+      messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
+      agentType,
+      tabTitle: tab.title,
+      status: disabledReason ? 'disabled' : 'eligible',
+      ...(disabledReason ? { disabledReason } : {})
+    }
   }
   const agentType =
     (launchAgentMayOwnPane(tab, ptyId) ? tab.launchAgent : null) ??
@@ -148,10 +177,11 @@ function deriveTitleHintAgentTarget(
   const disabledReason =
     titleEvidence.status === 'permission'
       ? 'Agent needs permission'
-      : hookSilentAgentSendRefusal(state, tab, ptyId, null, titleEvidence.title)
+      : hookSilentAgentSendRefusal(state, tab, ptyId, null, paneKey, titleEvidence.title)
 
   return {
-    paneKey: makePaneKey(tab.id, leafId),
+    paneKey,
+    leafId,
     tabId: tab.id,
     messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
     agentType,

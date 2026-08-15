@@ -15,7 +15,8 @@ import {
 } from '@/components/sidebar/workspace-card/activity/worktree-agent-row-selectors'
 import {
   selectRuntimePaneTitlesForWorktree,
-  selectLivePtyIdsForWorktree
+  selectLivePtyIdsForWorktree,
+  selectPaneForegroundAgentsForWorktree
 } from '@/components/sidebar/workspace-card/activity/worktree-card-status-inputs'
 import { useAppStore } from '@/store/index'
 import { selectKnownWorktreeById } from '@/store/workspaces/selection/known-worktree-selection'
@@ -106,6 +107,7 @@ export function ReviewNotesSendMenuContent({
     let inputs: unknown[] = []
     let previous: NotesSendAgentTarget[] = []
     return (state: ReturnType<typeof store.getState>, statuses: RuntimeStatuses) => {
+      const paneForegroundAgentByPaneKey = selectPaneForegroundAgentsForWorktree(state, worktreeId)
       const nextInputs = [
         state.tabsByWorktree[worktreeId],
         state.unifiedTabsByWorktree[worktreeId],
@@ -113,6 +115,7 @@ export function ReviewNotesSendMenuContent({
         selectTerminalLayoutsForWorktree(state, worktreeId),
         selectLivePtyIdsForWorktree(state, worktreeId),
         selectRuntimePaneTitlesForWorktree(state, worktreeId),
+        paneForegroundAgentByPaneKey,
         selectSendApprovalGuardEnvironmentIds(statuses),
         state.agentStatusEpoch
       ]
@@ -129,6 +132,7 @@ export function ReviewNotesSendMenuContent({
           terminalLayoutsByTabId: state.terminalLayoutsByTabId,
           ptyIdsByTabId: state.ptyIdsByTabId,
           runtimePaneTitlesByTabId: state.runtimePaneTitlesByTabId,
+          paneForegroundAgentByPaneKey,
           sendApprovalGuardEnvironmentIds: selectSendApprovalGuardEnvironmentIds(statuses)
         },
         worktreeId,
