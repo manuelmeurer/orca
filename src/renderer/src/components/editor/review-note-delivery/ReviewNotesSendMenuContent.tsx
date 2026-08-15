@@ -110,6 +110,7 @@ export function ReviewNotesSendMenuContent({
         selectTerminalLayoutsForWorktree(state, worktreeId),
         selectLivePtyIdsForWorktree(state, worktreeId),
         selectRuntimePaneTitlesForWorktree(state, worktreeId),
+        state.paneForegroundAgentByPaneKey,
         state.agentStatusEpoch
       ]
       if (shallow(inputs, nextInputs)) {
