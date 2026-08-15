@@ -5,6 +5,7 @@ import type {
   TerminalPaneLayoutNode,
   TerminalTab
 } from '../../../../../shared/workspace-layout/terminal-tab-types'
+import type { PaneForegroundAgentEntry } from '@/store/slices/agent-status/pane-authority/pane-foreground-agent'
 import {
   deriveRunningAgentSendTargets,
   type RunningAgentTargetState
@@ -36,7 +37,8 @@ function state(
   livePtyIds: string[] | undefined,
   tabTitle = 'kiro-cli',
   root: TerminalPaneLayoutNode | null = null,
-  guardedHosts: string[] = []
+  guardedHosts: string[] = [],
+  foreground?: PaneForegroundAgentEntry
 ): RunningAgentTargetState {
   const ptyId = livePtyIds?.[0] ?? 'pty-1'
   const tab: TerminalTab = {
@@ -63,6 +65,7 @@ function state(
     },
     ptyIdsByTabId: livePtyIds === undefined ? {} : { 'tab-1': livePtyIds },
     runtimePaneTitlesByTabId: {},
+    paneForegroundAgentByPaneKey: foreground ? { [PANE_KEY]: foreground } : {},
     sendApprovalGuardEnvironmentIds: new Set(guardedHosts)
   }
 }
@@ -73,10 +76,28 @@ function onlyTarget(s: RunningAgentTargetState) {
 }
 
 describe('deriveRunningAgentSendTargets terminal liveness', () => {
-  it('keeps a long-idle, title-less agent pane with a live PTY selectable', () => {
-    expect(onlyTarget(state(entry({}), ['pty-1']))).toEqual({
+  it('keeps a stale, title-silent pane selectable when foreground evidence identifies the agent', () => {
+    expect(
+      onlyTarget(
+        state(entry({ agentType: 'codex' }), ['pty-1'], 'zsh', null, [], {
+          agent: 'codex',
+          agentEvidence: 'process-read',
+          shellForeground: false
+        })
+      )
+    ).toEqual({
       status: 'eligible',
       disabledReason: undefined
     })
+  })
+
+  it.each([
+    ['no foreground evidence', undefined],
+    ['a shell foreground', { agent: null, agentEvidence: 'process-read', shellForeground: true }],
+    ['a launch record', { agent: 'codex', agentEvidence: 'launch-record', shellForeground: false }]
+  ] as const)('keeps stale title-silent panes disabled with %s', (_, foreground) => {
+    expect(
+      onlyTarget(state(entry({ agentType: 'codex' }), ['pty-1'], 'zsh', null, [], foreground))
+    ).toEqual({ status: 'disabled', disabledReason: 'Agent status is stale' })
   })
 })
