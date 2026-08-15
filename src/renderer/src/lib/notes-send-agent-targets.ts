@@ -8,6 +8,7 @@ import type { AppState } from '@/store/types'
 import { isTerminalLeafId, makePaneKey } from '../../../shared/workspace-layout/stable-pane-id'
 import { resolveTerminalTitleAgentType } from '../../../shared/agent-status/title/terminal-title-agent-type'
 import type { TerminalTab } from '../../../shared/workspace-layout/terminal-tab-types'
+import type { TerminalAgent } from '../../../shared/agent-status/identity/terminal-agent'
 import { detectAgentSendTitleStatus } from './agent-send-title-status'
 import {
   resolveRuntimePaneTitleLeafResolution,
@@ -25,9 +26,12 @@ import type { AgentMessageTarget } from './agent-message-target'
 export type NotesSendAgentTargetState = RunningAgentTargetState &
   Pick<AppState, 'runtimePaneTitlesByTabId'>
 
+const EMPTY_STRUCTURED_CHAT_TAB_NAMES: StructuredChatTabNames = new Map()
+
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
@@ -60,11 +64,25 @@ function detectTitleHintPaneEvidence(
 export function deriveNotesSendAgentTargets(
   state: NotesSendAgentTargetState,
   worktreeId: string,
+  now?: number
+): NotesSendAgentTarget[]
+export function deriveNotesSendAgentTargets(
+  state: NotesSendAgentTargetState,
+  worktreeId: string,
   chatNames: StructuredChatTabNames,
+  now?: number
+): NotesSendAgentTarget[]
+export function deriveNotesSendAgentTargets(
+  state: NotesSendAgentTargetState,
+  worktreeId: string,
+  chatNamesOrNow: StructuredChatTabNames | number = EMPTY_STRUCTURED_CHAT_TAB_NAMES,
   now = Date.now()
 ): NotesSendAgentTarget[] {
+  const chatNames =
+    typeof chatNamesOrNow === 'number' ? EMPTY_STRUCTURED_CHAT_TAB_NAMES : chatNamesOrNow
+  const effectiveNow = typeof chatNamesOrNow === 'number' ? chatNamesOrNow : now
   const targets: NotesSendAgentTarget[] = [
-    ...deriveRunningAgentSendTargets(state, worktreeId, now),
+    ...deriveRunningAgentSendTargets(state, worktreeId, effectiveNow),
     ...deriveStatuslessStructuredAgentSendTargets(state, worktreeId)
   ].map((target) => {
     const tab = structuredChatTabById(state.unifiedTabsByWorktree, worktreeId, target.tabId)
@@ -99,6 +117,7 @@ function toNotesSendAgentTarget(
   return {
     paneKey: target.paneKey,
     tabId: target.tabId,
+    ...(target.kind === 'terminal' ? { leafId: target.leafId } : {}),
     messageTarget: runningAgentMessageTarget(target),
     agentType:
       target.kind === 'terminal'
@@ -108,6 +127,17 @@ function toNotesSendAgentTarget(
     status: target.status,
     ...(target.disabledReason ? { disabledReason: target.disabledReason } : {})
   }
+}
+
+function resolveForegroundAgentProcess(
+  state: NotesSendAgentTargetState,
+  paneKey: string
+): TerminalAgent | null {
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  if (!foreground?.agent || foreground.shellForeground === true) {
+    return null
+  }
+  return foreground.agent
 }
 
 function resolveNotesTargetAgentType(
@@ -137,16 +167,31 @@ function deriveTitleHintAgentTarget(
 
   const paneTitles = state.runtimePaneTitlesByTabId[tab.id]
   const paneTitleResolution = resolveRuntimePaneTitleLeafResolution(layout, paneTitles, leafId)
+  const paneKey = makePaneKey(tab.id, leafId)
   const titleEvidence = detectTitleHintPaneEvidence(paneTitleResolution, tab.title)
   if (!titleEvidence) {
-    // Launch metadata can precede actual TUI startup; require current matching title evidence for discovery.
-    return null
+    if (state.agentStatusByPaneKey[paneKey]?.restoredUnconfirmed) {
+      return null
+    }
+    const foregroundAgent = resolveForegroundAgentProcess(state, paneKey)
+    return foregroundAgent
+      ? {
+          paneKey,
+          tabId: tab.id,
+          leafId,
+          messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
+          agentType: tab.launchAgent ?? foregroundAgent,
+          tabTitle: tab.title,
+          status: 'eligible'
+        }
+      : null
   }
   const disabledReason =
     titleEvidence.status === 'permission' ? 'Agent needs permission' : undefined
 
   return {
-    paneKey: makePaneKey(tab.id, leafId),
+    paneKey,
+    leafId,
     tabId: tab.id,
     messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
     agentType: tab.launchAgent ?? resolveTerminalTitleAgentType(titleEvidence.title),
