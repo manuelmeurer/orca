@@ -130,6 +130,7 @@ describe('notes send agent targets', () => {
       {
         paneKey,
         tabId: STATUS_TAB_ID,
+        leafId: LEAF_A,
         messageTarget: { kind: 'terminal', tabId: STATUS_TAB_ID, leafId: LEAF_A },
         agentType: 'codex',
         tabTitle: 'Terminal 1',
@@ -201,6 +202,7 @@ describe('notes send agent targets', () => {
       {
         paneKey: makePaneKey(LAUNCH_TAB_ID, LEAF_B),
         tabId: LAUNCH_TAB_ID,
+        leafId: LEAF_B,
         messageTarget: { kind: 'terminal', tabId: LAUNCH_TAB_ID, leafId: LEAF_B },
         agentType: 'codex',
         tabTitle: 'Terminal 2',
@@ -227,6 +229,7 @@ describe('notes send agent targets', () => {
       {
         paneKey: makePaneKey(MANUAL_TAB_ID, LEAF_B),
         tabId: MANUAL_TAB_ID,
+        leafId: LEAF_B,
         messageTarget: { kind: 'terminal', tabId: MANUAL_TAB_ID, leafId: LEAF_B },
         agentType: 'codex',
         tabTitle: 'Terminal 2',
@@ -484,6 +487,7 @@ describe('notes send agent targets', () => {
       {
         paneKey,
         tabId: LAUNCH_TAB_ID,
+        leafId: LEAF_B,
         messageTarget: { kind: 'terminal', tabId: LAUNCH_TAB_ID, leafId: LEAF_B },
         agentType: 'codex',
         tabTitle: 'Previous Codex session',
@@ -698,6 +702,7 @@ describe('notes send agent targets', () => {
       {
         paneKey: makePaneKey(MANUAL_TAB_ID, LEAF_B),
         tabId: MANUAL_TAB_ID,
+        leafId: LEAF_B,
         messageTarget: { kind: 'terminal', tabId: MANUAL_TAB_ID, leafId: LEAF_B },
         agentType: 'opencode',
         tabTitle: 'Terminal 2',

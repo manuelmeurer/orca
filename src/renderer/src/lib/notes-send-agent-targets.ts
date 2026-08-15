@@ -8,6 +8,7 @@ import type { AppState } from '@/store/types'
 import { isTerminalLeafId, makePaneKey } from '../../../shared/stable-pane-id'
 import { resolveTerminalTitleAgentType } from '../../../shared/terminal-title-agent-type'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
+import type { TuiAgent } from '../../../shared/tui-agent'
 import { detectAgentSendTitleStatus } from './agent-send-title-status'
 import {
   resolveRuntimePaneTitleLeafResolution,
@@ -28,6 +29,7 @@ export type NotesSendAgentTargetState = RunningAgentTargetState &
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
@@ -99,6 +101,7 @@ function toNotesSendAgentTarget(
   return {
     paneKey: target.paneKey,
     tabId: target.tabId,
+    ...(target.kind === 'terminal' ? { leafId: target.leafId } : {}),
     messageTarget: runningAgentMessageTarget(target),
     agentType:
       target.kind === 'terminal'
@@ -108,6 +111,19 @@ function toNotesSendAgentTarget(
     status: target.status,
     ...(target.disabledReason ? { disabledReason: target.disabledReason } : {})
   }
+}
+
+// Why: process-table identity outlives both hooks and titles; shellForeground
+// proves the agent already exited, so it is the one disqualifying signal.
+function resolveForegroundAgentProcess(
+  state: NotesSendAgentTargetState,
+  paneKey: string
+): TuiAgent | null {
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  if (!foreground?.agent || foreground.shellForeground === true) {
+    return null
+  }
+  return foreground.agent
 }
 
 function resolveNotesTargetAgentType(
@@ -137,17 +153,35 @@ function deriveTitleHintAgentTarget(
 
   const paneTitles = state.runtimePaneTitlesByTabId[tab.id]
   const paneTitleResolution = resolveRuntimePaneTitleLeafResolution(layout, paneTitles, leafId)
+  const paneKey = makePaneKey(tab.id, leafId)
   const titleEvidence = detectTitleHintPaneEvidence(paneTitleResolution, tab.title)
   if (!titleEvidence) {
-    // Launch metadata can precede actual TUI startup; require current matching title evidence for discovery.
-    return null
+    if (state.agentStatusByPaneKey[paneKey]?.restoredUnconfirmed) {
+      return null
+    }
+
+    // Why: a hookless, title-silent agent is still provable by the pane's
+    // foreground process, so fall back to it before dropping the pane.
+    const foregroundAgent = resolveForegroundAgentProcess(state, paneKey)
+    return foregroundAgent
+      ? {
+          paneKey,
+          tabId: tab.id,
+          leafId,
+          messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
+          agentType: tab.launchAgent ?? foregroundAgent,
+          tabTitle: tab.title,
+          status: 'eligible'
+        }
+      : null
   }
   const disabledReason =
     titleEvidence.status === 'permission' ? 'Agent needs permission' : undefined
 
   return {
-    paneKey: makePaneKey(tab.id, leafId),
+    paneKey,
     tabId: tab.id,
+    leafId,
     messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
     agentType: tab.launchAgent ?? resolveTerminalTitleAgentType(titleEvidence.title),
     tabTitle: tab.title,

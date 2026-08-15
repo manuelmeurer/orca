@@ -10,6 +10,7 @@ const EMPTY_UNIFIED_TABS_BY_WORKTREE: AppState['unifiedTabsByWorktree'] = {}
 const EMPTY_TERMINAL_LAYOUTS_BY_TAB_ID: AppState['terminalLayoutsByTabId'] = {}
 const EMPTY_PTY_IDS_BY_TAB_ID: AppState['ptyIdsByTabId'] = {}
 const EMPTY_RUNTIME_PANE_TITLES_BY_TAB_ID: AppState['runtimePaneTitlesByTabId'] = {}
+const EMPTY_PANE_FOREGROUND_AGENT_BY_PANE_KEY: AppState['paneForegroundAgentByPaneKey'] = {}
 
 // Force the picker’s target workspace visible only while a running agent there can receive the message.
 export function useAgentSendTargetWorktreeId(): string | null {
@@ -36,6 +37,11 @@ export function useAgentSendTargetWorktreeId(): string | null {
   const agentTargetRuntimePaneTitlesByTabId = useAppStore((s) =>
     agentSendPopoverTargetMode ? s.runtimePaneTitlesByTabId : EMPTY_RUNTIME_PANE_TITLES_BY_TAB_ID
   )
+  const agentTargetPaneForegroundAgentByPaneKey = useAppStore((s) =>
+    agentSendPopoverTargetMode
+      ? s.paneForegroundAgentByPaneKey
+      : EMPTY_PANE_FOREGROUND_AGENT_BY_PANE_KEY
+  )
   return useMemo(() => {
     void agentTargetStatusEpoch
     if (!agentSendPopoverTargetMode) {
@@ -48,7 +54,8 @@ export function useAgentSendTargetWorktreeId(): string | null {
         unifiedTabsByWorktree: agentTargetUnifiedTabsByWorktree,
         terminalLayoutsByTabId: agentTargetTerminalLayoutsByTabId,
         ptyIdsByTabId: agentTargetPtyIdsByTabId,
-        runtimePaneTitlesByTabId: agentTargetRuntimePaneTitlesByTabId
+        runtimePaneTitlesByTabId: agentTargetRuntimePaneTitlesByTabId,
+        paneForegroundAgentByPaneKey: agentTargetPaneForegroundAgentByPaneKey
       },
       agentSendPopoverTargetMode.worktreeId
     )
@@ -64,6 +71,7 @@ export function useAgentSendTargetWorktreeId(): string | null {
     agentTargetUnifiedTabsByWorktree,
     agentTargetTerminalLayoutsByTabId,
     agentTargetPtyIdsByTabId,
-    agentTargetRuntimePaneTitlesByTabId
+    agentTargetRuntimePaneTitlesByTabId,
+    agentTargetPaneForegroundAgentByPaneKey
   ])
 }
