@@ -12,6 +12,10 @@ import type { AgentMessageTarget } from './agent-message-target'
 import { detectAgentSendTitleStatus } from './agent-send-title-status'
 import { resolveRuntimePaneTitleLeafResolution } from '../../../../../shared/workspace-layout/terminal-topology/runtime-pane-title-leaf-id'
 import { hookSilentPaneSendState } from '../../../../../shared/agent-status/approval/hook-silent-approval-agents'
+import {
+  AGENT_STATUS_STALE_AFTER_MS,
+  isAgentStatusFresh
+} from '../../../../../shared/agent-status/contracts/agent-status-freshness'
 import { resolveTerminalTitleAgentType } from '../../../../../shared/agent-status/title/terminal-title-agent-type'
 import {
   ptyHostGuardsSendApprovals,
@@ -26,7 +30,12 @@ export type RunningAgentTargetState = Pick<
   | 'terminalLayoutsByTabId'
   | 'ptyIdsByTabId'
 > &
-  Partial<Pick<AppState, 'runtimePaneTitlesByTabId' | 'runtimeStatusByEnvironmentId'>> & {
+  Partial<
+    Pick<
+      AppState,
+      'runtimePaneTitlesByTabId' | 'runtimeStatusByEnvironmentId' | 'paneForegroundAgentByPaneKey'
+    >
+  > & {
     /** Selected instead of the whole host-status map so unrelated host updates don't rescan targets. */
     sendApprovalGuardEnvironmentIds?: ReadonlySet<string>
   }
@@ -75,10 +84,11 @@ export function runningAgentSendTargetAgentType(
 
 export function deriveRunningAgentSendTargets(
   state: RunningAgentTargetState,
-  worktreeId: string
+  worktreeId: string,
+  now = Date.now()
 ): RunningAgentSendTarget[] {
   return [
-    ...deriveTerminalAgentSendTargets(state, worktreeId),
+    ...deriveTerminalAgentSendTargets(state, worktreeId, now),
     ...deriveStructuredAgentSendTargets(state, worktreeId, 'with-status')
   ]
 }
@@ -93,7 +103,8 @@ export function deriveStatuslessStructuredAgentSendTargets(
 
 function deriveTerminalAgentSendTargets(
   state: RunningAgentTargetState,
-  worktreeId: string
+  worktreeId: string,
+  now: number
 ): TerminalAgentSendTarget[] {
   const tabs = state.tabsByWorktree[worktreeId] ?? []
   if (tabs.length === 0) {
@@ -103,7 +114,11 @@ function deriveTerminalAgentSendTargets(
   const tabsById = new Map(tabs.map((tab) => [tab.id, tab]))
   const targets: TerminalAgentSendTarget[] = []
 
-  for (const [paneKey, entry] of Array.from(state.agentStatusByPaneKey.entries())) {
+  const statusEntries =
+    typeof state.agentStatusByPaneKey.entries === 'function'
+      ? state.agentStatusByPaneKey.entries()
+      : Object.entries(state.agentStatusByPaneKey)
+  for (const [paneKey, entry] of statusEntries) {
     const parsed = parsePaneKey(paneKey)
     if (!parsed) {
       continue
@@ -119,9 +134,12 @@ function deriveTerminalAgentSendTargets(
       layoutPtyId && state.ptyIdsByTabId?.[parsed.tabId]?.includes(layoutPtyId) ? layoutPtyId : null
     let disabledReason: string | undefined
 
-    // Idle agents emit no hooks, so row age never disables a live pane; the host's process/screen check gates the send.
+    // A stale status row can stay targetable only with current title or foreground-process evidence.
     const liveTitle = ptyId ? resolveLeafTitle(state, parsed.tabId, parsed.leafId, tab.title) : null
     const liveTitleStatus = liveTitle === null ? null : detectAgentSendTitleStatus(liveTitle)
+    const liveTitleAgent = liveTitle ? resolveTerminalTitleAgentType(liveTitle) : null
+    const foregroundAgent = resolveForegroundAgentHint(state, paneKey)
+    const statusFresh = isAgentStatusFresh(entry, now, AGENT_STATUS_STALE_AFTER_MS)
     // An unanswered prompt sends no further hooks and idle titles can persist under open dialogs, so only the agent's next report clears it.
     if (!ptyId) {
       disabledReason = 'Terminal is no longer available'
@@ -131,8 +149,19 @@ function deriveTerminalAgentSendTargets(
       liveTitleStatus === 'permission'
     ) {
       disabledReason = 'Agent needs permission'
+    } else if (entry.restoredUnconfirmed || (!statusFresh && !liveTitleAgent && !foregroundAgent)) {
+      disabledReason = 'Agent status is stale'
     } else {
-      disabledReason = hookSilentAgentSendRefusal(state, tab, ptyId, entry, liveTitle)
+      // A quiet status row cannot vouch for a different foreground process.
+      const sendEntry = statusFresh || liveTitleAgent ? entry : null
+      disabledReason = hookSilentAgentSendRefusal(
+        state,
+        tab,
+        ptyId,
+        sendEntry,
+        liveTitle,
+        foregroundAgent
+      )
     }
 
     targets.push({
@@ -158,7 +187,7 @@ function deriveStructuredAgentSendTargets(
   status: 'with-status' | 'without-status'
 ): StructuredAgentSendTarget[] {
   const targets: StructuredAgentSendTarget[] = []
-  for (const tab of state.unifiedTabsByWorktree[worktreeId] ?? []) {
+  for (const tab of state.unifiedTabsByWorktree?.[worktreeId] ?? []) {
     if (!isStructuredTab(tab) || !tab.agentSessionAgent) {
       continue
     }
@@ -203,6 +232,19 @@ function resolveLeafTitle(
 
 const NO_GUARDED_HOSTS: ReadonlySet<string> = new Set()
 
+export function resolveForegroundAgentHint(
+  state: RunningAgentTargetState,
+  paneKey: string
+): AppState['paneForegroundAgentByPaneKey'][string]['agent'] | null {
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  // Legacy hints remain discoverable; explicit launch records never count as a live process.
+  return foreground?.agent &&
+    foreground.agentEvidence !== 'launch-record' &&
+    foreground.shellForeground !== true
+    ? foreground.agent
+    : null
+}
+
 /** launchAgent names the tab's original PTY locally; a paired tab's ptyId follows its active pane, so any pane may be the launched one. */
 export function launchAgentMayOwnPane(tab: Pick<TerminalTab, 'ptyId'>, ptyId: string): boolean {
   return ptyId === tab.ptyId || isRemoteRuntimePtyId(ptyId)
@@ -214,12 +256,14 @@ export function hookSilentAgentSendRefusal(
   tab: Pick<TerminalTab, 'ptyId' | 'launchAgent'>,
   ptyId: string,
   entry: Pick<AgentStatusEntry, 'state' | 'agentType'> | null | undefined,
-  leafTitle: string | null
+  leafTitle: string | null,
+  foregroundAgent?: AppState['paneForegroundAgentByPaneKey'][string]['agent'] | null
 ): string | undefined {
   // Every identity counts: a row another agent left behind can't vouch for the one running now.
   const sendState = hookSilentPaneSendState(entry, [
     launchAgentMayOwnPane(tab, ptyId) ? tab.launchAgent : null,
-    leafTitle === null ? null : resolveTerminalTitleAgentType(leafTitle)
+    leafTitle === null ? null : resolveTerminalTitleAgentType(leafTitle),
+    foregroundAgent
   ])
   if (sendState === 'none') {
     return undefined
@@ -253,7 +297,8 @@ export function terminalPaneSendRefusal(
     tab,
     ptyId,
     state.agentStatusByPaneKey.get(makePaneKey(tabId, leafId)),
-    resolveLeafTitle(state, tabId, leafId, tab.title)
+    resolveLeafTitle(state, tabId, leafId, tab.title),
+    resolveForegroundAgentHint(state, makePaneKey(tabId, leafId))
   )
 }
 

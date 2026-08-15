@@ -2,6 +2,7 @@ import { acceptedAgentStatuses } from '@/store/slices/agent-status/status-owners
 import type { AppState } from '@/store/types'
 import { selectSendApprovalGuardEnvironmentIds } from '@/runtime/hosts/capabilities/send-approval-guard-hosts'
 import type { RunningAgentTargetState } from '@/lib/agent-session/messaging/running-agent-targets'
+import { selectPaneForegroundAgentsForWorktree } from './worktree-card-status-inputs'
 
 export type SendTargetInputsState = Pick<
   AppState,
@@ -13,6 +14,7 @@ export type SendTargetInputsState = Pick<
   | 'ptyIdsByTabId'
   | 'runtimePaneTitlesByTabId'
   | 'runtimeStatusByEnvironmentId'
+  | 'paneForegroundAgentByPaneKey'
 >
 
 export type SendTargetControlInputsState = Pick<
@@ -33,7 +35,8 @@ export const EMPTY_SEND_TARGET_INPUTS: RunningAgentTargetState = Object.freeze({
   terminalLayoutsByTabId: {},
   ptyIdsByTabId: {},
   runtimePaneTitlesByTabId: {},
-  sendApprovalGuardEnvironmentIds: new Set<string>()
+  sendApprovalGuardEnvironmentIds: new Set<string>(),
+  paneForegroundAgentByPaneKey: {}
 })
 
 // Inactive cards ignore picker-mode and freshness-epoch changes.
@@ -59,7 +62,8 @@ export function selectSendTargetInputs(
     runtimePaneTitlesByTabId: s.runtimePaneTitlesByTabId,
     sendApprovalGuardEnvironmentIds: selectSendApprovalGuardEnvironmentIds(
       s.runtimeStatusByEnvironmentId
-    )
+    ),
+    paneForegroundAgentByPaneKey: selectPaneForegroundAgentsForWorktree(s, worktreeId)
   }
 }
 

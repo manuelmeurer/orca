@@ -5,6 +5,10 @@ import type { AppState } from '@/store/types'
 import { deriveRunningAgentSendTargets } from '@/lib/agent-session/messaging/running-agent-targets'
 import { recomputeOn } from '@/lib/recompute-on'
 import { selectSendApprovalGuardEnvironmentIds } from '@/runtime/hosts/capabilities/send-approval-guard-hosts'
+import {
+  EMPTY_PANE_FOREGROUND_AGENTS,
+  selectPaneForegroundAgentsForWorktree
+} from '@/components/sidebar/workspace-card/activity/worktree-card-status-inputs'
 
 // Why: selectors that opt out of a slice must return one stable reference, or every store tick looks like a change.
 const EMPTY_AGENT_STATUS_BY_PANE_KEY: AppState['agentStatusByPaneKey'] = acceptedAgentStatuses()
@@ -45,6 +49,11 @@ export function useAgentSendTargetWorktreeId(): string | null {
       ? selectSendApprovalGuardEnvironmentIds(s.runtimeStatusByEnvironmentId)
       : NO_GUARDED_HOSTS
   )
+  const agentTargetPaneForegroundAgentByPaneKey = useAppStore((s) =>
+    agentSendPopoverTargetMode
+      ? selectPaneForegroundAgentsForWorktree(s, agentSendPopoverTargetMode.worktreeId)
+      : EMPTY_PANE_FOREGROUND_AGENTS
+  )
   return useMemo(
     () =>
       recomputeOn([agentTargetStatusEpoch], () => {
@@ -59,7 +68,8 @@ export function useAgentSendTargetWorktreeId(): string | null {
             terminalLayoutsByTabId: agentTargetTerminalLayoutsByTabId,
             ptyIdsByTabId: agentTargetPtyIdsByTabId,
             runtimePaneTitlesByTabId: agentTargetRuntimePaneTitlesByTabId,
-            sendApprovalGuardEnvironmentIds: agentTargetGuardedHosts
+            sendApprovalGuardEnvironmentIds: agentTargetGuardedHosts,
+            paneForegroundAgentByPaneKey: agentTargetPaneForegroundAgentByPaneKey
           },
           agentSendPopoverTargetMode.worktreeId
         )
@@ -68,7 +78,7 @@ export function useAgentSendTargetWorktreeId(): string | null {
           : null
       }),
     [
-      // Why: eligibility can flip when the stale-boundary scheduler bumps this epoch without replacing the status map.
+      // Eligibility can flip when the stale-boundary scheduler bumps this epoch without replacing the status map.
       agentTargetStatusEpoch,
       agentSendPopoverTargetMode,
       agentTargetStatusByPaneKey,
@@ -77,7 +87,8 @@ export function useAgentSendTargetWorktreeId(): string | null {
       agentTargetTerminalLayoutsByTabId,
       agentTargetPtyIdsByTabId,
       agentTargetRuntimePaneTitlesByTabId,
-      agentTargetGuardedHosts
+      agentTargetGuardedHosts,
+      agentTargetPaneForegroundAgentByPaneKey
     ]
   )
 }
