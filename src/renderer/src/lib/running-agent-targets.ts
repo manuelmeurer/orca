@@ -17,7 +17,7 @@ export type RunningAgentTargetState = Pick<
   | 'terminalLayoutsByTabId'
   | 'ptyIdsByTabId'
 > &
-  Partial<Pick<AppState, 'runtimePaneTitlesByTabId'>>
+  Partial<Pick<AppState, 'runtimePaneTitlesByTabId' | 'paneForegroundAgentByPaneKey'>>
 
 type RunningAgentSendTargetEligibility = {
   status: 'eligible' | 'disabled'
@@ -128,7 +128,7 @@ function deriveTerminalAgentSendTargets(
     } else if (decision.hookState === null) {
       if (liveTitleStatus === 'permission') {
         disabledReason = 'Agent needs permission'
-      } else if (liveTitleStatus === null) {
+      } else if (liveTitleStatus === null && !hasLiveForegroundAgentProof(state, paneKey, ptyId)) {
         disabledReason = 'Agent status is stale'
       }
     } else if (!ptyId) {
@@ -162,7 +162,7 @@ function deriveStructuredAgentSendTargets(
   status: 'with-status' | 'without-status'
 ): StructuredAgentSendTarget[] {
   const targets: StructuredAgentSendTarget[] = []
-  for (const tab of state.unifiedTabsByWorktree[worktreeId] ?? []) {
+  for (const tab of state.unifiedTabsByWorktree?.[worktreeId] ?? []) {
     if (!isStructuredTab(tab) || !tab.agentSessionAgent) {
       continue
     }
@@ -188,6 +188,18 @@ function deriveStructuredAgentSendTargets(
     })
   }
   return targets
+}
+
+function hasLiveForegroundAgentProof(
+  state: RunningAgentTargetState,
+  paneKey: string,
+  ptyId: string | null
+): boolean {
+  if (!ptyId) {
+    return false
+  }
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  return foreground?.agent != null && foreground.shellForeground !== true
 }
 
 function detectLiveAgentPaneStatus(
