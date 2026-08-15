@@ -65,6 +65,7 @@ export function ReviewNotesSendMenuContent({
   const terminalLayoutsByTabId = useAppStore((s) => s.terminalLayoutsByTabId)
   const ptyIdsByTabId = useAppStore(useShallow((s) => selectLivePtyIdsForWorktree(s, worktreeId)))
   const runtimePaneTitlesByTabId = useAppStore((s) => s.runtimePaneTitlesByTabId)
+  const paneForegroundAgentByPaneKey = useAppStore((s) => s.paneForegroundAgentByPaneKey)
   const agentStatusEpoch = useAppStore((s) => s.agentStatusEpoch)
   const agentRows = useWorktreeAgentRows(worktreeId)
   const now = useNow(30_000)
@@ -77,7 +78,8 @@ export function ReviewNotesSendMenuContent({
         unifiedTabsByWorktree,
         terminalLayoutsByTabId,
         ptyIdsByTabId,
-        runtimePaneTitlesByTabId
+        runtimePaneTitlesByTabId,
+        paneForegroundAgentByPaneKey
       },
       worktreeId
     )
@@ -90,6 +92,7 @@ export function ReviewNotesSendMenuContent({
     unifiedTabsByWorktree,
     terminalLayoutsByTabId,
     runtimePaneTitlesByTabId,
+    paneForegroundAgentByPaneKey,
     ptyIdsByTabId,
     worktreeId
   ])
