@@ -403,6 +403,53 @@ describe('createWorktree parent pick on a remote runtime', () => {
     expect(toast.warning).not.toHaveBeenCalled()
   })
 
+  it('uses the selected host for duplicate repo ownership and parent validation', async () => {
+    const store = createRemoteStore()
+    const remoteOwner = store.getState().repos[0]!
+    store.setState({
+      repos: [makeRepo(REMOTE_REPO, 'local'), remoteOwner],
+      settings: { activeRuntimeEnvironmentId: null } as never,
+      worktreesByRepo: {
+        [REMOTE_REPO]: [
+          makeWorktree({
+            id: PARENT_ID,
+            repoId: REMOTE_REPO,
+            path: '/remote/parent',
+            displayName: 'parent-wt',
+            instanceId: 'parent-instance',
+            hostId: 'runtime:env-1'
+          })
+        ]
+      }
+    } as Partial<AppState>)
+    mockRuntimeCreate((id) => ({
+      id,
+      ok: true,
+      result: {
+        worktree: makeWorktree({
+          id: `${REMOTE_REPO}::/remote/child`,
+          repoId: REMOTE_REPO,
+          path: '/remote/child'
+        }),
+        lineage: makeLineage({
+          worktreeId: `${REMOTE_REPO}::/remote/child`,
+          parentWorktreeId: PARENT_ID
+        })
+      }
+    }))
+    const createWorktree = store.getState().createWorktree
+    const args: Parameters<typeof createWorktree> = [REMOTE_REPO, 'feature', 'origin/main']
+    args[25] = { parentWorktreeId: PARENT_ID, executionHostId: 'runtime:env-1' }
+
+    await createWorktree(...args)
+
+    expect(createCalls()[0]?.params).toMatchObject({
+      parentWorkspace: worktreeWorkspaceKey(PARENT_ID)
+    })
+    expect(mockApi.worktrees.create).not.toHaveBeenCalled()
+    expect(toast.warning).not.toHaveBeenCalled()
+  })
+
   it('retries without the parent and warns when the host no longer has it', async () => {
     mockRuntimeCreate((id) => ({
       id,

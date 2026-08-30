@@ -307,6 +307,52 @@ describe('host-qualified scoped worktree resolution', () => {
     }
   )
 
+  it('ignores colliding cross-repo lineage owned by another host', async () => {
+    const childId = 'repo-child::/same/worktree'
+    const parentId = 'repo-parent::/parent/worktree'
+    const deps = createDeps([
+      repo('repo-child', '/local/child-repo', { executionHostId: 'local' }),
+      repo('repo-child', '/remote/child-repo', { executionHostId: 'ssh:builder' }),
+      repo('repo-parent', '/remote/parent-repo', { executionHostId: 'ssh:builder' })
+    ])
+    deps.lineageById[childId] = {
+      worktreeId: childId,
+      worktreeInstanceId: 'remote-child-instance',
+      parentWorktreeId: parentId,
+      parentWorktreeInstanceId: 'remote-parent-instance',
+      origin: 'manual',
+      capture: { source: 'manual-action', confidence: 'explicit' },
+      createdAt: 1
+    }
+    ;(
+      deps.store as Store & {
+        getWorktreeMetaForHost: (
+          worktreeId: string,
+          hostId: ExecutionHostId
+        ) => WorktreeMeta | undefined
+      }
+    ).getWorktreeMetaForHost = (worktreeId, hostId) => {
+      if (hostId !== 'ssh:builder') {
+        return undefined
+      }
+      return worktreeId === childId
+        ? ({ instanceId: 'remote-child-instance', hostId } as unknown as WorktreeMeta)
+        : ({ instanceId: 'remote-parent-instance', hostId } as unknown as WorktreeMeta)
+    }
+
+    await expect(resolveScopedWorktreeIdRow(deps, childId, 'local')).resolves.toMatchObject({
+      id: childId,
+      hostId: 'local'
+    })
+    expect(deps.scanRepo.mock.calls.map(([owner]) => owner)).toEqual([
+      expect.objectContaining({ path: '/local/child-repo' })
+    ])
+
+    deps.scanRepo.mockClear()
+    await expect(resolveScopedWorktreeIdRow(deps, childId, 'ssh:builder')).resolves.toBeNull()
+    expect(deps.scanRepo).not.toHaveBeenCalled()
+  })
+
   it('reuses fleet owner counts without reloading repos per row', async () => {
     const owners = Array.from({ length: 100 }, (_, index) =>
       repo(`repo-${index}`, `/repos/${index}`, { executionHostId: 'local' })

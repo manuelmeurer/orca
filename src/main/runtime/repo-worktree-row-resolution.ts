@@ -202,7 +202,20 @@ export async function resolveScopedWorktreeIdRow(
     }
     const child = splitWorktreeId(lineage.worktreeId)
     const parent = splitWorktreeId(lineage.parentWorktreeId)
-    return child?.repoId !== parent?.repoId
+    if (child?.repoId === parent?.repoId) {
+      return false
+    }
+    // Why: lineage IDs are host-unqualified. A colliding edge on another host must not force this
+    // host's otherwise-scoped lookup into a fleet fallback that cannot resolve the target row.
+    if (requiredHostId !== undefined && typeof store.getWorktreeMetaForHost === 'function') {
+      const childMeta = readWorktreeMetaForHost(store, lineage.worktreeId, requiredHostId)
+      const parentMeta = readWorktreeMetaForHost(store, lineage.parentWorktreeId, requiredHostId)
+      return (
+        childMeta?.instanceId === lineage.worktreeInstanceId &&
+        parentMeta?.instanceId === lineage.parentWorktreeInstanceId
+      )
+    }
+    return true
   })
   if (touchesCrossRepoLineage) {
     return null

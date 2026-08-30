@@ -3,7 +3,10 @@ import type { WorkspaceKey } from '../../../../../../shared/folder-workspace-typ
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { resolveWorktreeDisplayName } from '@/lib/worktree-default-display-name'
-import { getWorktreeExecutionHostId } from '../../../../../../shared/execution-host'
+import {
+  getWorktreeExecutionHostId,
+  type ExecutionHostId
+} from '../../../../../../shared/execution-host'
 import {
   folderWorkspaceKey,
   parseWorkspaceKey,
@@ -27,12 +30,13 @@ export type WorktreeCreateParentPick = {
 export function resolveWorktreeCreateParent(
   state: AppState,
   repoId: string,
-  requestedParentWorktreeId: string | undefined
+  requestedParentWorktreeId: string | undefined,
+  executionHostId?: ExecutionHostId
 ): WorktreeCreateParentPick {
   const pickedRows = requestedParentWorktreeId
     ? getIndexedWorktreesById(state.worktreesByRepo, requestedParentWorktreeId)
     : []
-  const childHostId = repoHostId(state, repoId)
+  const childHostId = repoHostId(state, repoId, executionHostId)
   const repoOwners = getIndexedRepoOwners(state.repos)
   const usableRows = pickedRows.filter((candidate) => {
     const candidateRepoOwners = repoOwners.get(candidate.repoId) ?? []
