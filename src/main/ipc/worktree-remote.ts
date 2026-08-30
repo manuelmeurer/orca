@@ -295,6 +295,7 @@ function createdWorktreeSharesParentLineageBoundary(
   })
 }
 
+/** Persists the workspace and worktree lineage captured during creation when the parent is valid. */
 export function recordWorkspaceLineageForCreatedWorktree(
   store: Store,
   args: CreateWorktreeArgs,

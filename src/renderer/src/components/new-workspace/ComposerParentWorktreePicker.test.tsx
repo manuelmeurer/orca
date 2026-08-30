@@ -396,6 +396,36 @@ describe('ComposerParentWorktreePicker', () => {
     expect(candidateLabels().join(' ')).not.toContain('Other host')
   })
 
+  it('excludes an unstamped candidate with multiple repo owners', () => {
+    seed([
+      makeWorktree({ id: 'ambiguous', displayName: 'Ambiguous owner', repoId: 'repo2' }),
+      makeWorktree({
+        id: 'stamped',
+        displayName: 'Stamped owner',
+        repoId: 'repo2',
+        hostId: 'ssh:remote'
+      })
+    ])
+    storeState.repos = [
+      makeRepo(REPO_ID),
+      makeRepo('repo2'),
+      { ...makeRepo('repo2'), executionHostId: 'ssh:remote' }
+    ]
+
+    render(
+      <ComposerParentWorktreePicker
+        repoId={REPO_ID}
+        executionHostId="ssh:remote"
+        value={null}
+        onChange={vi.fn()}
+      />
+    )
+    fireEvent.click(trigger())
+
+    expect(candidateLabels().join(' ')).not.toContain('Ambiguous owner')
+    expect(candidateLabels().join(' ')).toContain('Stamped owner')
+  })
+
   it('restricts candidates to the active folder workspace subtree', () => {
     const attached = makeWorktree({
       id: 'attached',

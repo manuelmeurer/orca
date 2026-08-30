@@ -23,6 +23,7 @@ function getWorktreeOwnerHostId(
   return repo ? getWorktreeExecutionHostId(worktree, repo) : (worktree.hostId ?? null)
 }
 
+/** Lists valid parent targets within the child's effective execution-host boundary. */
 export function getEligibleWorktreeParents({
   child,
   worktrees,
@@ -47,6 +48,7 @@ export function getEligibleWorktreeParents({
   )
 }
 
+/** Whether one candidate can become the child's parent without violating lineage invariants. */
 export function isEligibleWorktreeParent({
   child,
   candidateParent,

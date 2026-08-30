@@ -10,6 +10,7 @@ export type WorktreeWithResolvedLineage<T extends Worktree = Worktree> = T & {
 /** Split out so create-time callers can check the same host boundary as projection. */
 export type WorktreeLineageBoundary = Pick<Worktree, 'hostId'>
 
+/** Whether two lineage endpoints may be related without crossing a known host boundary. */
 export function sharesWorktreeLineageBoundary(
   child: WorktreeLineageBoundary,
   parent: WorktreeLineageBoundary
@@ -17,6 +18,7 @@ export function sharesWorktreeLineageBoundary(
   return child.hostId === undefined || parent.hostId === undefined || child.hostId === parent.hostId
 }
 
+/** Applies the host-only boundary to fully resolved worktrees. */
 export function sharesResolvedWorktreeLineageBoundary(child: Worktree, parent: Worktree): boolean {
   return sharesWorktreeLineageBoundary(child, parent)
 }

@@ -11,9 +11,10 @@ type DeleteWorktreeLineageNoticeProps = {
   descendants: readonly Worktree[]
   dirtyChangeCountsByWorktreeId: ReadonlyMap<string, number>
   repoMap: ReadonlyMap<string, Repo>
-  targetRepoId: string | undefined
+  targetRepoId: string
 }
 
+/** Summarizes descendants included in a cascade delete and labels foreign repositories. */
 export function DeleteWorktreeLineageNotice({
   descendants,
   dirtyChangeCountsByWorktreeId,

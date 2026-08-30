@@ -3,12 +3,14 @@ import type { WorkspaceKey } from '../../../../../../shared/folder-workspace-typ
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { resolveWorktreeDisplayName } from '@/lib/worktree-default-display-name'
+import { getWorktreeExecutionHostId } from '../../../../../../shared/execution-host'
 import {
   folderWorkspaceKey,
   parseWorkspaceKey,
   worktreeWorkspaceKey
 } from '../../../../../../shared/workspace-scope'
-import { getIndexedWorktreeById } from '@/store/worktree-repo-index'
+import { getIndexedRepoOwners, getIndexedWorktreesById } from '@/store/worktree-repo-index'
+import { repoHostId } from '../listing/worktree-host-ownership'
 
 export type WorktreeCreateParentPick = {
   /** Workspace the create attaches to. Undefined once a stale pick is dropped. */
@@ -27,11 +29,23 @@ export function resolveWorktreeCreateParent(
   repoId: string,
   requestedParentWorktreeId: string | undefined
 ): WorktreeCreateParentPick {
-  const picked = requestedParentWorktreeId
-    ? getIndexedWorktreeById(state.worktreesByRepo, requestedParentWorktreeId)
-    : undefined
-  const usable = picked && !picked.isArchived && picked.repoId === repoId ? picked.id : undefined
-  const pickedDisplayName = picked ? resolveWorktreeDisplayName(picked).trim() : null
+  const pickedRows = requestedParentWorktreeId
+    ? getIndexedWorktreesById(state.worktreesByRepo, requestedParentWorktreeId)
+    : []
+  const childHostId = repoHostId(state, repoId)
+  const repoOwners = getIndexedRepoOwners(state.repos)
+  const usableRows = pickedRows.filter((candidate) => {
+    const candidateRepoOwners = repoOwners.get(candidate.repoId) ?? []
+    const candidateRepo = candidateRepoOwners.length === 1 ? candidateRepoOwners[0] : undefined
+    return (
+      !candidate.isArchived &&
+      (candidate.hostId !== undefined || candidateRepoOwners.length <= 1) &&
+      getWorktreeExecutionHostId(candidate, candidateRepo) === childHostId
+    )
+  })
+  const picked = usableRows.length === 1 ? usableRows[0] : undefined
+  const usable = picked?.id
+  const pickedDisplayName = pickedRows[0] ? resolveWorktreeDisplayName(pickedRows[0]).trim() : null
   if (usable) {
     return {
       parentWorkspace: worktreeWorkspaceKey(usable),

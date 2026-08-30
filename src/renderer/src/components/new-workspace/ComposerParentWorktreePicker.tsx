@@ -16,6 +16,7 @@ import { useAppStore } from '@/store'
 import {
   getIndexedAllWorktrees,
   getIndexedRepoMap,
+  getIndexedRepoOwners,
   getIndexedWorktreeById,
   getIndexedWorktreeMap
 } from '@/store/worktree-repo-index'
@@ -222,10 +223,13 @@ function ParentWorktreeCandidateList({
   const [search, setSearch] = useState('')
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const repoMap = getIndexedRepoMap(repos)
+  const repoOwners = getIndexedRepoOwners(repos)
 
   const candidates = useMemo(() => {
-    const childRepo = repoMap.get(repoId)
-    const childHostId = executionHostId ?? (childRepo ? getRepoExecutionHostId(childRepo) : null)
+    const childRepoOwners = repoOwners.get(repoId) ?? []
+    const childHostId =
+      executionHostId ??
+      (childRepoOwners.length === 1 ? getRepoExecutionHostId(childRepoOwners[0]) : null)
     const worktreeMap = getIndexedWorktreeMap(worktreesByRepo)
     const cyclicLineageIds = getCyclicProjectedWorktreeLineageIds(worktreeLineageById, worktreeMap)
     const folderSubtreeIds = activeFolderWorkspaceId
@@ -238,9 +242,11 @@ function ParentWorktreeCandidateList({
       : null
     return getIndexedAllWorktrees(worktreesByRepo)
       .filter((candidate) => {
-        const candidateRepo = repoMap.get(candidate.repoId)
+        const candidateRepoOwners = repoOwners.get(candidate.repoId) ?? []
+        const candidateRepo = candidateRepoOwners.length === 1 ? candidateRepoOwners[0] : undefined
         return (
           childHostId !== null &&
+          (candidate.hostId !== undefined || candidateRepoOwners.length <= 1) &&
           getWorktreeExecutionHostId(candidate, candidateRepo) === childHostId &&
           !candidate.isArchived &&
           !cyclicLineageIds.has(candidate.id) &&
@@ -252,7 +258,7 @@ function ParentWorktreeCandidateList({
     activeFolderWorkspaceId,
     executionHostId,
     repoId,
-    repoMap,
+    repoOwners,
     workspaceLineageByChildKey,
     worktreeLineageById,
     worktreesByRepo
