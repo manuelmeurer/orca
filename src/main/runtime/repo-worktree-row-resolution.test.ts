@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ExecutionHostId } from '../../shared/execution-host'
 import type { Repo } from '../../shared/repo-types'
+import type { WorktreeLineage } from '../../shared/worktree/lineage-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { GitWorktreeInfo, Worktree } from '../../shared/worktree/types'
 import type { Store } from '../persistence'
@@ -38,14 +39,16 @@ function gitWorktree(path: string): GitWorktreeInfo {
 
 function createDeps(repos: Repo[]): RepoWorktreeRowDeps & {
   metaById: Record<string, WorktreeMeta>
+  lineageById: Record<string, WorktreeLineage>
   scanRepo: ReturnType<typeof vi.fn<RepoWorktreeRowDeps['scanRepo']>>
   listFolderWorkspaces: ReturnType<typeof vi.fn<RepoWorktreeRowDeps['listFolderWorkspaces']>>
 } {
   const metaById: Record<string, WorktreeMeta> = {}
+  const lineageById: Record<string, WorktreeLineage> = {}
   const store = {
     getRepos: () => repos,
     getAllWorktreeMeta: () => metaById,
-    getAllWorktreeLineage: () => ({}),
+    getAllWorktreeLineage: () => lineageById,
     getProjects: () => [],
     getSettings: () => ({}),
     setWorktreeMeta: (worktreeId: string, updates: Partial<WorktreeMeta>) => {
@@ -59,7 +62,7 @@ function createDeps(repos: Repo[]): RepoWorktreeRowDeps & {
     worktrees: [gitWorktree(owner.id === 'unrelated' ? '/unrelated/worktree' : '/same/worktree')]
   }))
   const listFolderWorkspaces = vi.fn<RepoWorktreeRowDeps['listFolderWorkspaces']>(() => [])
-  return { store, metaById, scanRepo, listFolderWorkspaces }
+  return { store, metaById, lineageById, scanRepo, listFolderWorkspaces }
 }
 
 describe('host-qualified scoped worktree resolution', () => {
@@ -248,6 +251,27 @@ describe('host-qualified scoped worktree resolution', () => {
     await expect(
       resolveScopedWorktreeIdRow(deps, 'shared::/same/worktree', 'ssh:builder')
     ).resolves.toBeNull()
+    expect(deps.scanRepo).not.toHaveBeenCalled()
+  })
+
+  it('falls back to fleet resolution when the worktree has cross-repo lineage', async () => {
+    const deps = createDeps([
+      repo('repo-child', '/local/child-repo', { executionHostId: 'local' }),
+      repo('repo-parent', '/local/parent-repo', { executionHostId: 'local' })
+    ])
+    const childId = 'repo-child::/same/worktree'
+    const parentId = 'repo-parent::/parent/worktree'
+    deps.lineageById[childId] = {
+      worktreeId: childId,
+      worktreeInstanceId: 'child-instance',
+      parentWorktreeId: parentId,
+      parentWorktreeInstanceId: 'parent-instance',
+      origin: 'manual',
+      capture: { source: 'manual-action', confidence: 'explicit' },
+      createdAt: 1
+    }
+
+    await expect(resolveScopedWorktreeIdRow(deps, childId, 'local')).resolves.toBeNull()
     expect(deps.scanRepo).not.toHaveBeenCalled()
   })
 

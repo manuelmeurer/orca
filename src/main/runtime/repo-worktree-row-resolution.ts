@@ -175,9 +175,8 @@ export async function resolveRepoWorktreeRows(
 /**
  * Resolve one `<repoId>::<path>` worktree id by scanning only its owning repo.
  *
- * Lineage edges are intra-repo by construction (`sharesResolvedWorktreeLineageBoundary` requires a
- * matching repoId), so projecting over one repo's rows yields the same parent and child ids the
- * fleet scan would. Returns `null` whenever that does not hold, and the caller falls back.
+ * Cross-repo lineage needs every repo on the host, so affected rows return `null` and let the caller
+ * fall back to its fleet scan. Other rows retain the cheap scoped path.
  */
 export async function resolveScopedWorktreeIdRow(
   deps: RepoWorktreeRowDeps,
@@ -187,6 +186,18 @@ export async function resolveScopedWorktreeIdRow(
   const { store } = deps
   const parsed = splitWorktreeIdForFilesystem(worktreeId)
   if (!parsed?.repoId || !parsed.worktreePath) {
+    return null
+  }
+  const lineageById = store.getAllWorktreeLineage?.() ?? {}
+  const touchesCrossRepoLineage = Object.values(lineageById).some((lineage) => {
+    const child = splitWorktreeId(lineage.worktreeId)
+    const parent = splitWorktreeId(lineage.parentWorktreeId)
+    return (
+      child?.repoId !== parent?.repoId &&
+      (lineage.worktreeId === worktreeId || lineage.parentWorktreeId === worktreeId)
+    )
+  })
+  if (touchesCrossRepoLineage) {
     return null
   }
   const owners = store
@@ -208,7 +219,7 @@ export async function resolveScopedWorktreeIdRow(
     store.getAllWorktreeMeta() ?? {},
     resolveLocalProjectRuntimesForRepos(store, [repo])
   )
-  const projected = projectResolvedWorktreeLineage(rows, store.getAllWorktreeLineage?.() ?? {})
+  const projected = projectResolvedWorktreeLineage(rows, lineageById)
   const exact = projected.find((worktree) => worktree.id === worktreeId)
   if (exact) {
     return exact

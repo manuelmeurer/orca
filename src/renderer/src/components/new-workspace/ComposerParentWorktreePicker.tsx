@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, ChevronsUpDown, GitBranch } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Button } from '@/components/ui/button'
+import { RepoBadgeMark } from '@/components/repo/RepoBadgeLabel'
 import { Command, CommandInput, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -14,6 +15,7 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import {
   getIndexedAllWorktrees,
+  getIndexedRepoMap,
   getIndexedWorktreeById,
   getIndexedWorktreeMap
 } from '@/store/worktree-repo-index'
@@ -34,14 +36,14 @@ import {
   getLineageChildWorktree
 } from '@/components/right-sidebar/folder-workspace-attached-worktrees'
 import { COMBOBOX_POPOVER_SURFACE } from './type-ahead-combobox-styles'
-import {
-  sharesWorktreeLineageBoundary,
-  type WorktreeLineageBoundary
-} from '../../../../shared/resolved-worktree-lineage'
 import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
 import type { WorkspaceLineage, WorktreeLineage } from '../../../../shared/worktree/lineage-types'
 import type { Worktree } from '../../../../shared/worktree/types'
-import type { ExecutionHostId } from '../../../../shared/execution-host'
+import {
+  getRepoExecutionHostId,
+  getWorktreeExecutionHostId,
+  type ExecutionHostId
+} from '../../../../shared/execution-host'
 
 /** Single-line row: text-sm leading (20px) over py-2. Set as the row's explicit height. */
 const NO_PARENT_ROW_HEIGHT = 36
@@ -51,7 +53,6 @@ type ComposerParentWorktreePickerProps = {
   repoId: string
   /** Parent must belong to the same execution host that will create the child. */
   executionHostId?: ExecutionHostId | null
-  projectId?: string | null
   value: string | null
   onChange: (id: string | null) => void
   disabled?: boolean
@@ -62,7 +63,6 @@ type ComposerParentWorktreePickerProps = {
 type ParentWorktreeCandidateListProps = {
   repoId: string
   executionHostId?: ExecutionHostId | null
-  projectId?: string | null
   value: string | null
   activeFolderWorkspaceId: string | null
   onSelect: (id: string | null) => void
@@ -78,7 +78,6 @@ type ParentWorktreeCandidateListProps = {
 function ComposerParentWorktreePickerImpl({
   repoId,
   executionHostId,
-  projectId,
   value,
   onChange,
   disabled = false,
@@ -155,7 +154,6 @@ function ComposerParentWorktreePickerImpl({
           <ParentWorktreeCandidateList
             repoId={repoId}
             executionHostId={executionHostId}
-            projectId={projectId}
             value={value}
             activeFolderWorkspaceId={activeFolderWorkspaceId}
             onSelect={handleSelect}
@@ -209,12 +207,12 @@ function getFolderWorkspaceSubtreeIds(
 function ParentWorktreeCandidateList({
   repoId,
   executionHostId,
-  projectId,
   value,
   activeFolderWorkspaceId,
   onSelect
 }: ParentWorktreeCandidateListProps): React.JSX.Element {
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const repos = useAppStore((s) => s.repos)
   const worktreeLineageById = useAppStore((s) => s.worktreeLineageById)
   const workspaceLineageByChildKey = useAppStore((s) => s.workspaceLineageByChildKey)
   const listRef = useRef<HTMLDivElement>(null)
@@ -223,16 +221,11 @@ function ParentWorktreeCandidateList({
   const optionIdPrefix = `${useId()}option`
   const [search, setSearch] = useState('')
   const [highlightedIndex, setHighlightedIndex] = useState(0)
+  const repoMap = getIndexedRepoMap(repos)
 
   const candidates = useMemo(() => {
-    // Why `?? undefined`: an unresolved host or project is "not known yet", not "no host", and
-    // the boundary check reads undefined on either side as a wildcard. A candidate in this repo
-    // with no recorded hostId inherits that repo's host, so it is on the child's host too.
-    const childBoundary: WorktreeLineageBoundary = {
-      repoId,
-      hostId: executionHostId ?? undefined,
-      projectId: projectId ?? undefined
-    }
+    const childRepo = repoMap.get(repoId)
+    const childHostId = executionHostId ?? (childRepo ? getRepoExecutionHostId(childRepo) : null)
     const worktreeMap = getIndexedWorktreeMap(worktreesByRepo)
     const cyclicLineageIds = getCyclicProjectedWorktreeLineageIds(worktreeLineageById, worktreeMap)
     const folderSubtreeIds = activeFolderWorkspaceId
@@ -244,20 +237,22 @@ function ParentWorktreeCandidateList({
         )
       : null
     return getIndexedAllWorktrees(worktreesByRepo)
-      .filter(
-        (candidate) =>
-          candidate.repoId === repoId &&
+      .filter((candidate) => {
+        const candidateRepo = repoMap.get(candidate.repoId)
+        return (
+          childHostId !== null &&
+          getWorktreeExecutionHostId(candidate, candidateRepo) === childHostId &&
           !candidate.isArchived &&
-          sharesWorktreeLineageBoundary(childBoundary, candidate) &&
           !cyclicLineageIds.has(candidate.id) &&
           (folderSubtreeIds === null || folderSubtreeIds.has(candidate.id))
-      )
+        )
+      })
       .sort(compareWorktreeDisplayName)
   }, [
     activeFolderWorkspaceId,
     executionHostId,
-    projectId,
     repoId,
+    repoMap,
     workspaceLineageByChildKey,
     worktreeLineageById,
     worktreesByRepo
@@ -370,6 +365,8 @@ function ParentWorktreeCandidateList({
               return null
             }
             const isHighlighted = rowIndex === activeIndex
+            const foreignRepo =
+              candidate?.repoId === repoId ? undefined : repoMap.get(candidate?.repoId ?? '')
             return (
               <div
                 key={virtualRow.key}
@@ -396,6 +393,12 @@ function ParentWorktreeCandidateList({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-medium">{candidate.displayName}</div>
                     <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
+                      {foreignRepo ? (
+                        <span className="inline-flex min-w-0 max-w-[8rem] shrink-0 items-center gap-1 rounded border border-border bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                          <RepoBadgeMark color={foreignRepo.badgeColor} />
+                          <span className="truncate lowercase">{foreignRepo.displayName}</span>
+                        </span>
+                      ) : null}
                       <GitBranch className="size-3 shrink-0" />
                       <span className="truncate">{branchDisplayName(candidate.branch)}</span>
                     </div>
