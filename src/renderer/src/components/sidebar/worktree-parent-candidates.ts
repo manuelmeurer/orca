@@ -1,5 +1,4 @@
 import { getWorktreeExecutionHostId } from '../../../../shared/execution-host'
-import { sharesResolvedWorktreeLineageBoundary } from '../../../../shared/resolved-worktree-lineage'
 import type { Repo } from '../../../../shared/repo-types'
 import type { WorktreeLineage } from '../../../../shared/worktree/lineage-types'
 import type { Worktree } from '../../../../shared/worktree/types'
@@ -62,7 +61,6 @@ export function isEligibleWorktreeParent({
   childHostId?: string | null
 }): boolean {
   return (
-    sharesResolvedWorktreeLineageBoundary(child, candidateParent) &&
     childHostId !== null &&
     getWorktreeOwnerHostId(candidateParent, repoMap) === childHostId &&
     !candidateParent.isArchived &&
