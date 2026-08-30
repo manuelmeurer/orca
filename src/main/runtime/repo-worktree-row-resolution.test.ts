@@ -254,26 +254,58 @@ describe('host-qualified scoped worktree resolution', () => {
     expect(deps.scanRepo).not.toHaveBeenCalled()
   })
 
-  it('falls back to fleet resolution when the worktree has cross-repo lineage', async () => {
-    const deps = createDeps([
-      repo('repo-child', '/local/child-repo', { executionHostId: 'local' }),
-      repo('repo-parent', '/local/parent-repo', { executionHostId: 'local' })
-    ])
-    const childId = 'repo-child::/same/worktree'
-    const parentId = 'repo-parent::/parent/worktree'
-    deps.lineageById[childId] = {
-      worktreeId: childId,
-      worktreeInstanceId: 'child-instance',
-      parentWorktreeId: parentId,
-      parentWorktreeInstanceId: 'parent-instance',
-      origin: 'manual',
-      capture: { source: 'manual-action', confidence: 'explicit' },
-      createdAt: 1
-    }
+  it.each([
+    [
+      'exact child ID',
+      'repo-child::/same/worktree',
+      'repo-parent::/parent/worktree',
+      'repo-child::/same/worktree'
+    ],
+    [
+      'a trailing slash on the child ID',
+      'repo-child::/same/worktree',
+      'repo-parent::/parent/worktree',
+      'repo-child::/same/worktree/'
+    ],
+    [
+      'a doubled separator on the child ID',
+      'repo-child::/same/worktree',
+      'repo-parent::/parent/worktree',
+      'repo-child::/same//worktree'
+    ],
+    [
+      'an NFD child ID',
+      'repo-child::/same/café',
+      'repo-parent::/parent/worktree',
+      `repo-child::${'/same/café'.normalize('NFD')}`
+    ],
+    [
+      'a trailing slash on the parent ID',
+      'repo-child::/same/worktree',
+      'repo-parent::/parent/worktree',
+      'repo-parent::/parent/worktree/'
+    ]
+  ])(
+    'falls back to fleet resolution for cross-repo lineage requested with %s',
+    async (_label, childId, parentId, requestedId) => {
+      const deps = createDeps([
+        repo('repo-child', '/local/child-repo', { executionHostId: 'local' }),
+        repo('repo-parent', '/local/parent-repo', { executionHostId: 'local' })
+      ])
+      deps.lineageById[childId] = {
+        worktreeId: childId,
+        worktreeInstanceId: 'child-instance',
+        parentWorktreeId: parentId,
+        parentWorktreeInstanceId: 'parent-instance',
+        origin: 'manual',
+        capture: { source: 'manual-action', confidence: 'explicit' },
+        createdAt: 1
+      }
 
-    await expect(resolveScopedWorktreeIdRow(deps, childId, 'local')).resolves.toBeNull()
-    expect(deps.scanRepo).not.toHaveBeenCalled()
-  })
+      await expect(resolveScopedWorktreeIdRow(deps, requestedId, 'local')).resolves.toBeNull()
+      expect(deps.scanRepo).not.toHaveBeenCalled()
+    }
+  )
 
   it('reuses fleet owner counts without reloading repos per row', async () => {
     const owners = Array.from({ length: 100 }, (_, index) =>

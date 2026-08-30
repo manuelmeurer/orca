@@ -188,14 +188,21 @@ export async function resolveScopedWorktreeIdRow(
   if (!parsed?.repoId || !parsed.worktreePath) {
     return null
   }
+  const comparisonKey = worktreeIdComparisonKey(worktreeId)
   const lineageById = store.getAllWorktreeLineage?.() ?? {}
   const touchesCrossRepoLineage = Object.values(lineageById).some((lineage) => {
+    const touchesRequestedWorktree =
+      lineage.worktreeId === worktreeId ||
+      lineage.parentWorktreeId === worktreeId ||
+      (comparisonKey !== null &&
+        (worktreeIdComparisonKey(lineage.worktreeId) === comparisonKey ||
+          worktreeIdComparisonKey(lineage.parentWorktreeId) === comparisonKey))
+    if (!touchesRequestedWorktree) {
+      return false
+    }
     const child = splitWorktreeId(lineage.worktreeId)
     const parent = splitWorktreeId(lineage.parentWorktreeId)
-    return (
-      child?.repoId !== parent?.repoId &&
-      (lineage.worktreeId === worktreeId || lineage.parentWorktreeId === worktreeId)
-    )
+    return child?.repoId !== parent?.repoId
   })
   if (touchesCrossRepoLineage) {
     return null
@@ -226,7 +233,6 @@ export async function resolveScopedWorktreeIdRow(
   }
   // Why (#16243): the scan can spell this id's path differently — the divergence `path:` absorbs.
   // One equivalent row may stand in; two is an ambiguity a scoped lookup must refuse, not guess.
-  const comparisonKey = worktreeIdComparisonKey(worktreeId)
   if (comparisonKey === null) {
     return null
   }
