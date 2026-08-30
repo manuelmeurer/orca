@@ -450,6 +450,54 @@ describe('createWorktree parent pick on a remote runtime', () => {
     expect(toast.warning).not.toHaveBeenCalled()
   })
 
+  it('uses the accepted host row name when warning about a dropped parent', async () => {
+    const store = createRemoteStore()
+    const remoteOwner = store.getState().repos[0]!
+    const localParent = makeWorktree({
+      id: PARENT_ID,
+      repoId: REMOTE_REPO,
+      path: '/remote/parent',
+      displayName: 'local-parent',
+      instanceId: 'local-parent-instance',
+      hostId: 'local'
+    })
+    const remoteParent = makeWorktree({
+      id: PARENT_ID,
+      repoId: REMOTE_REPO,
+      path: '/remote/parent',
+      displayName: 'remote-parent',
+      instanceId: 'remote-parent-instance',
+      hostId: 'runtime:env-1'
+    })
+    store.setState({
+      repos: [makeRepo(REMOTE_REPO, 'local'), remoteOwner],
+      settings: { activeRuntimeEnvironmentId: null } as never,
+      worktreesByRepo: { [REMOTE_REPO]: [localParent, remoteParent] }
+    } as Partial<AppState>)
+    mockRuntimeCreate((id) => ({
+      id,
+      ok: true,
+      result: {
+        worktree: makeWorktree({
+          id: `${REMOTE_REPO}::/remote/child`,
+          repoId: REMOTE_REPO,
+          path: '/remote/child'
+        }),
+        lineage: null
+      }
+    }))
+    const createWorktree = store.getState().createWorktree
+    const args: Parameters<typeof createWorktree> = [REMOTE_REPO, 'feature', 'origin/main']
+    args[25] = { parentWorktreeId: PARENT_ID, executionHostId: 'runtime:env-1' }
+
+    await createWorktree(...args)
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      'Created without nesting under "remote-parent"',
+      expect.objectContaining({ description: expect.any(String) })
+    )
+  })
+
   it('retries without the parent and warns when the host no longer has it', async () => {
     mockRuntimeCreate((id) => ({
       id,

@@ -49,7 +49,8 @@ export function resolveWorktreeCreateParent(
   })
   const picked = usableRows.length === 1 ? usableRows[0] : undefined
   const usable = picked?.id
-  const pickedDisplayName = pickedRows[0] ? resolveWorktreeDisplayName(pickedRows[0]).trim() : null
+  const displayRow = picked ?? pickedRows[0]
+  const pickedDisplayName = displayRow ? resolveWorktreeDisplayName(displayRow).trim() : null
   if (usable) {
     return {
       parentWorkspace: worktreeWorkspaceKey(usable),
