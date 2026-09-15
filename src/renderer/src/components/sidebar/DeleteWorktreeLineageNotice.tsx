@@ -1,5 +1,9 @@
 import { Workflow } from 'lucide-react'
-import type { JSX } from 'react'
+import { useState, type JSX } from 'react'
+import { useAppStore } from '@/store'
+import { getRepoExecutionHostId } from '../../../../shared/execution-host'
+import RepoBadgeLabel from '@/components/repo/RepoBadgeLabel'
+import { Button } from '@/components/ui/button'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { getWorktreeHostIdentity } from '../../../../shared/worktree/host-qualified-identity'
 import { DeleteWorktreeDirtyChangeHint } from './DeleteWorktreeDirtyChangeHint'
@@ -14,7 +18,26 @@ export function DeleteWorktreeLineageNotice({
   descendants,
   dirtyChangeCountsByWorktreeId
 }: DeleteWorktreeLineageNoticeProps): JSX.Element | null {
+  const [expanded, setExpanded] = useState(false)
+  const repos = useAppStore((state) => state.repos)
+  const repoFor = (child: Worktree) =>
+    repos.find(
+      (repo) =>
+        repo.id === child.repoId && getRepoExecutionHostId(repo) === (child.hostId ?? 'local')
+    )
+  const affectedRepos = new Map(
+    descendants.map((child) => [
+      `${child.hostId ?? ''}|${child.repoId}`,
+      {
+        child,
+        count: descendants.filter(
+          (candidate) => candidate.repoId === child.repoId && candidate.hostId === child.hostId
+        ).length
+      }
+    ])
+  )
   const childWorkspaceCount = descendants.length
+
   if (childWorkspaceCount === 0) {
     return null
   }
@@ -42,13 +65,29 @@ export function DeleteWorktreeLineageNotice({
                   { value0: childWorkspaceCount }
                 )}
           </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {Array.from(affectedRepos, ([key, { child, count }]) => (
+              <span key={key} className="inline-flex min-w-0 items-center gap-1">
+                <RepoBadgeLabel
+                  name={repoFor(child)?.displayName ?? child.repoId}
+                  color={repoFor(child)?.badgeColor ?? ''}
+                />{' '}
+                ({count})
+              </span>
+            ))}
+          </div>
           {/* Why: long nowrap paths can otherwise give this grid child an
              intrinsic width wider than the modal. */}
           <div className="mt-2 min-w-0 max-w-full space-y-1 overflow-hidden rounded-sm border border-border/60 bg-background/60 px-2 py-1.5">
-            {descendants.slice(0, 4).map((child) => (
-              <div key={child.id} className="min-w-0 overflow-hidden">
+            {(expanded ? descendants : descendants.slice(0, 4)).map((child) => (
+              <div key={getWorktreeHostIdentity(child)} className="min-w-0 overflow-hidden">
                 <div className="truncate font-medium text-foreground">{child.displayName}</div>
+                <RepoBadgeLabel
+                  name={repoFor(child)?.displayName ?? child.repoId}
+                  color={repoFor(child)?.badgeColor ?? ''}
+                />
                 <div className="truncate text-muted-foreground">{child.path}</div>
+
                 <DeleteWorktreeDirtyChangeHint
                   changeCount={dirtyChangeCountsByWorktreeId.get(
                     child.hostId ? getWorktreeHostIdentity(child) : child.id
@@ -57,13 +96,20 @@ export function DeleteWorktreeLineageNotice({
               </div>
             ))}
             {descendants.length > 4 ? (
-              <div className="text-muted-foreground">
-                +{descendants.length - 4}{' '}
-                {translate(
-                  'auto.components.sidebar.DeleteWorktreeLineageNotice.ad407c2d55',
-                  'more'
-                )}
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded
+                  ? translate('worktree.delete.showFewerChildren', 'Show fewer')
+                  : translate(
+                      'worktree.delete.showAllChildren',
+                      'Show all {{count}} child workspaces',
+                      { count: descendants.length }
+                    )}
+              </Button>
             ) : null}
           </div>
         </div>
