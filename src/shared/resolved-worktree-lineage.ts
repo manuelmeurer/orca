@@ -1,3 +1,4 @@
+import { parseExecutionHostId } from './execution-host'
 import type { WorktreeLineage } from './worktree/lineage-types'
 import type { Worktree } from './worktree/types'
 
@@ -10,12 +11,22 @@ export type WorktreeWithResolvedLineage<T extends Worktree = Worktree> = T & {
 /** Repositories and projects may share lineage; execution authorities may not. */
 export type WorktreeLineageBoundary = Pick<Worktree, 'hostId' | 'runtimeOwnerEnvironmentId'>
 
+export function getWorktreeLineageRuntimeOwner(
+  worktree: WorktreeLineageBoundary
+): string | undefined {
+  const host = parseExecutionHostId(worktree.hostId)
+  return (
+    worktree.runtimeOwnerEnvironmentId ??
+    (host?.kind === 'runtime' ? host.environmentId : undefined)
+  )
+}
+
 export function sharesWorktreeLineageBoundary(
   child: WorktreeLineageBoundary,
   parent: WorktreeLineageBoundary
 ): boolean {
   return (
-    child.runtimeOwnerEnvironmentId === parent.runtimeOwnerEnvironmentId &&
+    getWorktreeLineageRuntimeOwner(child) === getWorktreeLineageRuntimeOwner(parent) &&
     (child.hostId === undefined || parent.hostId === undefined || child.hostId === parent.hostId)
   )
 }
