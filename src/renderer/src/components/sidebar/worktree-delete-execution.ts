@@ -1,3 +1,4 @@
+import { getBlockedDeletionDependencies } from './worktree-delete-dependencies'
 import { useAppStore } from '@/store'
 import { getRepoHostSummaries } from '@/store/slices/worktrees/listing/worktree-host-ownership'
 import {
@@ -5,7 +6,10 @@ import {
   showBlockedWorktreeDelete
 } from './worktree-delete-target-state'
 import { getProjectedWorktreeLineage } from './worktree-lineage-projection'
-import { isValidResolvedWorktreeLineageEdge } from '../../../../shared/resolved-worktree-lineage'
+import {
+  getWorktreeLineageRuntimeOwner,
+  isValidResolvedWorktreeLineageEdge
+} from '../../../../shared/resolved-worktree-lineage'
 import { getWorktreeOnHostFromState } from '@/store/selectors'
 import {
   isPathInsideOrEqual,
@@ -74,8 +78,8 @@ export async function runWorktreeDeletesInParallel(
   const aggregatePreservedBranches = uniqueTargets.length > 1
   const snapshot = useAppStore.getState()
   const owners = snapshot.repos ? getRepoHostSummaries(snapshot.repos) : null
-  const hostFor = (target: (typeof uniqueTargets)[number]) => {
-    const owner = owners?.get(target.repoId)
+  const hostFor = (target: (typeof uniqueTargets)[number], catalog = owners) => {
+    const owner = catalog?.get(target.repoId)
     return target.hostId ?? (owner?.count === 1 ? owner.onlyHostId : undefined)
   }
   let listChanged = false
@@ -118,7 +122,7 @@ export async function runWorktreeDeletesInParallel(
             if (
               child.id === parent.id ||
               hostFor(child) !== hostFor(parent) ||
-              child.runtimeOwnerEnvironmentId !== parent.runtimeOwnerEnvironmentId
+              getWorktreeLineageRuntimeOwner(child) !== getWorktreeLineageRuntimeOwner(parent)
             ) {
               return false
             }
@@ -138,24 +142,22 @@ export async function runWorktreeDeletesInParallel(
         : []
     )
   }
-  const blockTarget = (target: (typeof uniqueTargets)[number]): void => {
+  const blockTarget = (target: (typeof uniqueTargets)[number], cyclic = false): void => {
     failedTargets.add(getWorktreeHostIdentity(target))
-    showBlockedWorktreeDelete(target)
+    showBlockedWorktreeDelete(target, cyclic)
   }
   const executeTarget = async (target: (typeof uniqueTargets)[number]): Promise<void> => {
     const identity = getWorktreeHostIdentity(target)
-    const currentTarget = getWorktreeOnHostFromState(
-      useAppStore.getState(),
-      target.id,
-      target.hostId
-    )
+    const currentState = useAppStore.getState()
+    const currentOwners = currentState.repos ? getRepoHostSummaries(currentState.repos) : null
+    const currentTarget = getWorktreeOnHostFromState(currentState, target.id, target.hostId)
     if (
       !currentTarget ||
       currentTarget.instanceId !== target.instanceId ||
       // Why: defensively reject a confirmed target whose repository ownership disappeared.
       (options.respectLineageDependencies && owners && !hostFor(target)) ||
-      hostFor(currentTarget) !== hostFor(target) ||
-      currentTarget.runtimeOwnerEnvironmentId !== target.runtimeOwnerEnvironmentId
+      hostFor(currentTarget, currentOwners) !== hostFor(target) ||
+      getWorktreeLineageRuntimeOwner(currentTarget) !== getWorktreeLineageRuntimeOwner(target)
     ) {
       clearWorktreeDeleteTargetState(target)
       if (options.respectLineageDependencies) {
@@ -184,7 +186,7 @@ export async function runWorktreeDeletesInParallel(
       return
     }
     const deleted = await runWorktreeDeleteWithToast(
-      toWorktreeRemovalTarget(target),
+      { ...toWorktreeRemovalTarget(target), executionHostId: hostFor(target) ?? null },
       target.displayName,
       {
         ...options,
@@ -230,27 +232,15 @@ export async function runWorktreeDeletesInParallel(
   }
   try {
     if (options.respectLineageDependencies) {
-      const visiting = new Set<string>()
-      const visited = new Set<string>()
-      const hasCycle = (target: (typeof uniqueTargets)[number]): boolean => {
+      const blocked = getBlockedDeletionDependencies(dependencies)
+      for (const target of uniqueTargets) {
         const identity = getWorktreeHostIdentity(target)
-        if (visiting.has(identity)) {
-          return true
+        if (blocked.has(identity)) {
+          blockTarget(target, true)
+          completed.set(identity, Promise.resolve())
         }
-        if (visited.has(identity)) {
-          return false
-        }
-        visiting.add(identity)
-        const cyclic = (dependencies.get(identity) ?? []).some(hasCycle)
-        visiting.delete(identity)
-        visited.add(identity)
-        return cyclic
       }
-      if (uniqueTargets.some(hasCycle)) {
-        uniqueTargets.forEach(blockTarget)
-      } else {
-        await Promise.all(uniqueTargets.map((target) => schedule(target)))
-      }
+      await Promise.all(uniqueTargets.map((target) => schedule(target)))
     } else {
       await Promise.all(
         Array.from(groups.values()).map(async (group) => {
