@@ -4,7 +4,11 @@ import type { Repo } from '../../../../shared/repo-types'
 import type { WorktreeLineage } from '../../../../shared/worktree/lineage-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { canAssignWorktreeParent } from './worktree-parent-eligibility'
-import { getEligibleWorktreeParents, isEligibleWorktreeParent } from './worktree-parent-candidates'
+import {
+  getEligibleWorktreeParents,
+  getWorktreeOwnerHostId,
+  isEligibleWorktreeParent
+} from './worktree-parent-candidates'
 
 function makeWorktree(id: string, repoId = 'repo'): Worktree {
   return {
@@ -159,6 +163,25 @@ describe('canAssignWorktreeParent', () => {
         worktreeMap: makeMap([child, firstLoopParent, secondLoopParent])
       })
     ).toBe(false)
+  })
+
+  it('uses the sole repository owner for a legacy candidate badge', () => {
+    const candidate = makeWorktree('parent')
+    const repo: Repo = {
+      id: 'repo',
+      path: '/repo',
+      displayName: 'Remote',
+      badgeColor: '',
+      addedAt: 1,
+      executionHostId: 'ssh:builder'
+    }
+    expect(getWorktreeOwnerHostId(candidate, makeRepoMap(), [repo])).toBe('ssh:builder')
+    expect(
+      getWorktreeOwnerHostId(candidate, makeRepoMap(), [
+        repo,
+        { ...repo, executionHostId: 'local' }
+      ])
+    ).toBeNull()
   })
 
   it('offers sibling repositories on the same host', () => {
