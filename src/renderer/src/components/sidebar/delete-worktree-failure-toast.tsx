@@ -23,6 +23,7 @@ type DeleteWorktreeFailureToastOptions = {
   onForceDelete: () => void
   onDeleteAnyway: () => void
   worktreeId: string
+  identityKey?: string
   worktreeName: string
   nestedRemovalTarget?: WorktreeRemovalTarget
   onNestedDeleted?: () => void
@@ -119,6 +120,7 @@ export function showDeleteWorktreeFailureToast({
   onForceDelete,
   onDeleteAnyway,
   worktreeId,
+  identityKey,
   worktreeName,
   nestedRemovalTarget,
   onNestedDeleted
@@ -130,7 +132,7 @@ export function showDeleteWorktreeFailureToast({
     lockReason ?? null
   )
   const showToast = toastCopy.isDestructive ? toast.error : toast.info
-  const id = deleteWorktreeFailureToastId(worktreeId)
+  const id = deleteWorktreeFailureToastId(identityKey ?? worktreeId)
   const nestedTarget =
     isNestedWorktreeRemovalError(error) && window.api?.worktrees.previewNestedRemoval
       ? nestedRemovalTarget

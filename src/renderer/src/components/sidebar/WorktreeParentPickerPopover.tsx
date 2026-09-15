@@ -1,3 +1,5 @@
+import { getWorktreeLineageRuntimeOwner } from '../../../../shared/resolved-worktree-lineage'
+import { getIndexedAllWorktrees } from '@/store/worktree-repo-index'
 import React, {
   useCallback,
   useEffect,
@@ -12,9 +14,10 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Command, CommandInput, CommandList } from '@/components/ui/command'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useAppStore } from '@/store'
-import { useAllWorktrees, useRepoMap, useWorktreeMap } from '@/store/selectors'
+import { useRepoMap, useWorktreeMap } from '@/store/selectors'
 import { cn } from '@/lib/utils'
-import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
+import { handleWorktreeParentPickerKeyDown } from './worktree-parent-picker-keyboard'
+export { handleWorktreeParentPickerKeyDown } from './worktree-parent-picker-keyboard'
 import { useWorktreeActivityStatuses } from './use-worktree-activity-statuses'
 import { WorktreeParentPickerRow } from './WorktreeParentPickerRow'
 import { getEligibleWorktreeParents } from './worktree-parent-candidates'
@@ -51,14 +54,6 @@ type SelectParentArgs = {
   assignWorktreeParent: (worktreeId: string, args: { parentWorktreeId: string }) => Promise<void>
   close: () => void
   showError: (message: string) => void
-}
-
-type WorktreeParentPickerKeyboardArgs = {
-  event: React.KeyboardEvent<HTMLInputElement>
-  candidates: readonly { id: string }[]
-  activeIndex: number
-  moveHighlight: (index: number) => void
-  selectParent: (worktreeId: string) => void
 }
 
 function getAnchorRect(anchorElement: HTMLElement | null): AnchorRect | null {
@@ -101,39 +96,6 @@ export function selectWorktreeParent({
   })
 }
 
-export function handleWorktreeParentPickerKeyDown({
-  event,
-  candidates,
-  activeIndex,
-  moveHighlight,
-  selectParent
-}: WorktreeParentPickerKeyboardArgs): void {
-  if (isImeCompositionKeyDown(event) || candidates.length === 0) {
-    return
-  }
-  const navigate = (nextIndex: number): void => {
-    event.preventDefault()
-    event.stopPropagation()
-    moveHighlight(clampWorktreeParentPickerIndex(nextIndex, candidates.length))
-  }
-  if (event.key === 'ArrowDown') {
-    navigate(activeIndex + 1)
-  } else if (event.key === 'ArrowUp') {
-    navigate(activeIndex - 1)
-  } else if (event.key === 'Home') {
-    navigate(0)
-  } else if (event.key === 'End') {
-    navigate(candidates.length - 1)
-  } else if (event.key === 'Enter') {
-    const candidate = candidates[activeIndex]
-    if (candidate) {
-      event.preventDefault()
-      event.stopPropagation()
-      selectParent(candidate.id)
-    }
-  }
-}
-
 export function WorktreeParentPickerPopover({
   open,
   childWorktreeId,
@@ -142,7 +104,13 @@ export function WorktreeParentPickerPopover({
   anchorElement,
   onOpenChange
 }: WorktreeParentPickerPopoverProps): React.JSX.Element | null {
-  const worktrees = useAllWorktrees()
+  const runtimeOwnerEnvironmentId = getWorktreeLineageRuntimeOwner({
+    hostId: childHostId,
+    runtimeOwnerEnvironmentId: childRuntimeOwnerEnvironmentId
+  })
+  const worktrees = useAppStore((state) =>
+    getIndexedAllWorktrees(state.worktreesByRepo, { runtimeOwnerEnvironmentId })
+  )
   const worktreeMap = useWorktreeMap()
   const repoMap = useRepoMap()
   const repos = useAppStore((state) => state.repos)
@@ -163,7 +131,7 @@ export function WorktreeParentPickerPopover({
     (worktree) =>
       worktree.id === childWorktreeId &&
       (!childHostId || worktree.hostId === childHostId) &&
-      worktree.runtimeOwnerEnvironmentId === childRuntimeOwnerEnvironmentId
+      getWorktreeLineageRuntimeOwner(worktree) === runtimeOwnerEnvironmentId
   )
   const child = children.length === 1 ? children[0] : undefined
   const candidates = useMemo(

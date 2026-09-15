@@ -1,7 +1,10 @@
 import { getWorktreeOnHostFromState } from '@/store/selectors'
 import type { AppState } from '@/store/types'
 import { getProjectedWorktreeLineage } from './worktree-lineage-projection'
-import { isValidResolvedWorktreeLineageEdge } from '../../../../shared/resolved-worktree-lineage'
+import {
+  getWorktreeLineageRuntimeOwner,
+  isValidResolvedWorktreeLineageEdge
+} from '../../../../shared/resolved-worktree-lineage'
 import {
   isPathInsideOrEqual,
   normalizeRuntimePathForComparison
@@ -33,7 +36,7 @@ export function buildWorktreeDeleteLineageDependencies<T extends WorktreeDeleteL
       if (
         child.id === parent.id ||
         hostFor(child) !== hostFor(parent) ||
-        child.runtimeOwnerEnvironmentId !== parent.runtimeOwnerEnvironmentId
+        getWorktreeLineageRuntimeOwner(child) !== getWorktreeLineageRuntimeOwner(parent)
       ) {
         return false
       }
@@ -50,27 +53,4 @@ export function buildWorktreeDeleteLineageDependencies<T extends WorktreeDeleteL
     dependencies.set(getWorktreeHostIdentity(parent), children)
   }
   return dependencies
-}
-
-export function hasWorktreeDeleteLineageCycle<T extends WorktreeDeleteLineageTarget>(
-  targets: readonly T[],
-  dependencies: ReadonlyMap<string, readonly T[]>
-): boolean {
-  const visiting = new Set<string>()
-  const visited = new Set<string>()
-  const hasCycle = (target: T): boolean => {
-    const identity = getWorktreeHostIdentity(target)
-    if (visiting.has(identity)) {
-      return true
-    }
-    if (visited.has(identity)) {
-      return false
-    }
-    visiting.add(identity)
-    const cyclic = (dependencies.get(identity) ?? []).some(hasCycle)
-    visiting.delete(identity)
-    visited.add(identity)
-    return cyclic
-  }
-  return targets.some(hasCycle)
 }
