@@ -182,7 +182,10 @@ export type WorktreeSlice = {
     worktreeId: string,
     args: { parentWorktreeId?: string; noParent?: boolean }
   ) => Promise<void>
-  assignWorktreeParent: (worktreeId: string, args: { parentWorktreeId: string }) => Promise<void>
+  assignWorktreeParent: (
+    worktreeId: string,
+    args: { parentWorktreeId: string; executionHostId?: ExecutionHostId }
+  ) => Promise<void>
   createWorktree: (
     repoId: string,
     name: string,
