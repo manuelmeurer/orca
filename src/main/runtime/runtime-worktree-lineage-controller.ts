@@ -9,6 +9,11 @@ import { sharesResolvedWorktreeLineageBoundary } from '../../shared/resolved-wor
 import type { OrchestrationDb } from './orchestration/db'
 import type { RuntimeStore } from './runtime-store-contract'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
+import type { ExecutionHostId } from '../../shared/execution-host'
+import {
+  readFolderLineageParentHost,
+  readWorktreeLineageParentMeta
+} from '../worktree-lineage-parent'
 import {
   RuntimeLineageError,
   resolveRuntimeWorktreeCreateLineage,
@@ -29,6 +34,32 @@ type RuntimeWorktreeLineageDependencies = {
 
 export class RuntimeWorktreeLineageController {
   constructor(private readonly deps: RuntimeWorktreeLineageDependencies) {}
+
+  validateCreate(
+    resolution: WorktreeLineageResolution,
+    hostId: ExecutionHostId
+  ): WorktreeLineageResolution {
+    if (resolution.kind === 'none') {
+      return resolution
+    }
+    const store = this.deps.getStore()
+    const parent = resolution.parent
+    const valid =
+      store &&
+      (parent.type === 'folder'
+        ? readFolderLineageParentHost(store, parent.folderWorkspace.id) === hostId
+        : parent.worktree.hostId === hostId &&
+          readWorktreeLineageParentMeta(store, parent.worktree.id, hostId)?.instanceId ===
+            parent.instanceId)
+    if (valid) {
+      return resolution
+    }
+    const message = 'Parent workspace must belong to the same execution host.'
+    if (resolution.capture.confidence === 'explicit') {
+      throw new RuntimeLineageError('LINEAGE_PARENT_CONTEXT_CONFLICT', message)
+    }
+    return { kind: 'none', warnings: [{ code: 'LINEAGE_PARENT_CONTEXT_CONFLICT', message }] }
+  }
 
   async resolveCreate(input?: WorktreeLineageInput): Promise<WorktreeLineageResolution> {
     return resolveRuntimeWorktreeCreateLineage(input, {
@@ -90,11 +121,18 @@ export class RuntimeWorktreeLineageController {
     if (!sharesResolvedWorktreeLineageBoundary(child, parent)) {
       throw new RuntimeLineageError(
         'LINEAGE_PARENT_CONTEXT_CONFLICT',
-        'Parent worktree must belong to the same repository, execution host, and project.'
+        'Parent worktree must belong to the same execution host.'
       )
     }
     const instanceById = new Map(
-      this.deps.getCachedWorktrees()?.map((worktree) => [worktree.id, worktree.instanceId]) ?? [
+      this.deps
+        .getCachedWorktrees()
+        ?.filter(
+          (worktree) =>
+            worktree.hostId === child.hostId &&
+            worktree.runtimeOwnerEnvironmentId === child.runtimeOwnerEnvironmentId
+        )
+        .map((worktree) => [worktree.id, worktree.instanceId]) ?? [
         [child.id, child.instanceId],
         [parent.id, parent.instanceId]
       ]

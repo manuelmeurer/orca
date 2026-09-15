@@ -132,7 +132,7 @@ describe('delete worktree flow', () => {
     mocks.state.deleteStateByWorktreeId = {}
     mocks.state.gitStatusByWorktree = {}
     mocks.state.worktreeLineageById = {}
-    mocks.state.repos = []
+    mocks.state.repos = [{ id: 'repo-1', displayName: 'Repo' }]
     vi.mocked(toast.error).mockClear()
     vi.mocked(toast.info).mockClear()
     vi.mocked(showDeleteWorktreeFailureToast).mockClear()

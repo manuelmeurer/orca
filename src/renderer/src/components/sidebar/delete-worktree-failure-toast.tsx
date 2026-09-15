@@ -15,6 +15,7 @@ type DeleteWorktreeFailureToastOptions = {
   hasKnownChanges?: boolean
   /** The archive hook refused this removal, so the user may waive it (#19334). */
   canWaiveArchiveHook?: boolean
+  showViewChanges?: boolean
   onViewChanges: () => void
   onForceDelete: () => void
   onDeleteAnyway: () => void
@@ -94,6 +95,7 @@ export function showDeleteWorktreeFailureToast({
   lockReason,
   hasKnownChanges,
   canWaiveArchiveHook,
+  showViewChanges,
   onViewChanges,
   onForceDelete,
   onDeleteAnyway,
@@ -118,7 +120,9 @@ export function showDeleteWorktreeFailureToast({
         description={toastCopy.description}
         canForceDelete={canForceDelete}
         canWaiveArchiveHook={canWaiveArchiveHook === true}
-        showViewChanges={!isLockedWorktreeRemovalError(error) || hasKnownChanges === true}
+        showViewChanges={
+          showViewChanges ?? (!isLockedWorktreeRemovalError(error) || hasKnownChanges === true)
+        }
         onViewChanges={onViewChanges}
         onForceDelete={onForceDelete}
         onDeleteAnyway={onDeleteAnyway}
