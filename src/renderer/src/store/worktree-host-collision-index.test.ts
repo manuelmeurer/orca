@@ -63,6 +63,15 @@ describe('id-keyed worktree projections keep distinct hosts distinct', () => {
     expect(replaceWorktreeInRepoLists(byRepo(baseWorktree), updated)['repo-1']).toEqual([updated])
   })
 
+  it('keeps legacy runtime rows out of direct-owner picker catalogs', () => {
+    const legacy = { ...baseWorktree, hostId: 'runtime:env-a' as const }
+    const rows = byRepo(localRow, legacy)
+    expect(getIndexedAllWorktrees(rows, { runtimeOwnerEnvironmentId: undefined })).toEqual([
+      localRow
+    ])
+    expect(getIndexedAllWorktrees(rows, { runtimeOwnerEnvironmentId: 'env-a' })).toEqual([legacy])
+  })
+
   it('scopes lineage by runtime owner without duplicating the default catalog', () => {
     const direct = { ...sshRow, instanceId: 'direct' }
     const relayed = { ...sshRow, instanceId: 'relayed', runtimeOwnerEnvironmentId: 'hub' }

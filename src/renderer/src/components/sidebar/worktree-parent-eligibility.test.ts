@@ -189,6 +189,30 @@ describe('canAssignWorktreeParent', () => {
     ).toEqual([sameRepo.id, otherRepo.id])
   })
 
+  it('accepts legacy runtime parents and rejects a cycle across mixed runtime stamps', () => {
+    const child = {
+      ...makeWorktree('child'),
+      hostId: 'runtime:env-a' as const,
+      runtimeOwnerEnvironmentId: 'env-a'
+    }
+    const parent = { ...makeWorktree('parent'), hostId: 'runtime:env-a' as const }
+    const worktrees = [child, parent]
+    const args = {
+      child,
+      worktrees,
+      lineageById: {},
+      worktreeMap: makeMap(worktrees),
+      repoMap: makeRepoMap()
+    }
+    expect(getEligibleWorktreeParents(args)).toEqual([parent])
+    expect(
+      getEligibleWorktreeParents({
+        ...args,
+        lineageById: { [parent.id]: makeLineage(parent, child) }
+      })
+    ).toEqual([])
+  })
+
   it('excludes same-repo candidates owned by a different runtime host', () => {
     const child = makeWorktree('child', 'repo-a')
     const sameHost = makeWorktree('same-host', 'repo-a')

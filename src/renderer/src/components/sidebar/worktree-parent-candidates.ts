@@ -1,3 +1,4 @@
+import { getWorktreeLineageRuntimeOwner } from '../../../../shared/resolved-worktree-lineage'
 import { getWorktreeExecutionHostId } from '../../../../shared/execution-host'
 import type { Repo } from '../../../../shared/repo-types'
 import type { WorktreeLineage } from '../../../../shared/worktree/lineage-types'
@@ -52,7 +53,7 @@ function getOwnerView(
     byHost = new Map()
     byCatalog.set(catalog, byHost)
   }
-  const key = JSON.stringify([childHostId, args.child.runtimeOwnerEnvironmentId])
+  const key = JSON.stringify([childHostId, getWorktreeLineageRuntimeOwner(args.child)])
   const cached = byHost.get(key)
   if (cached) {
     return cached
@@ -62,7 +63,7 @@ function getOwnerView(
       .filter(
         (worktree) =>
           getWorktreeOwnerHostId(worktree, args.repoMap, args.repos) === childHostId &&
-          worktree.runtimeOwnerEnvironmentId === args.child.runtimeOwnerEnvironmentId
+          getWorktreeLineageRuntimeOwner(worktree) === getWorktreeLineageRuntimeOwner(args.child)
       )
       .map((worktree) => [worktree.id, worktree])
   )
@@ -114,7 +115,7 @@ export function isEligibleWorktreeParent({
   return (
     childHostId !== null &&
     getWorktreeOwnerHostId(candidateParent, repoMap, repos) === childHostId &&
-    candidateParent.runtimeOwnerEnvironmentId === child.runtimeOwnerEnvironmentId &&
+    getWorktreeLineageRuntimeOwner(candidateParent) === getWorktreeLineageRuntimeOwner(child) &&
     !candidateParent.isArchived &&
     canAssignWorktreeParent({
       child,
