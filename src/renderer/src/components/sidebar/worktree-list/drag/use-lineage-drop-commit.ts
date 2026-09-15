@@ -5,7 +5,8 @@ import { translate } from '@/i18n/i18n'
 import type { Repo } from '../../../../../../shared/repo-types'
 import type { Worktree } from '../../../../../../shared/worktree/types'
 import type { WorktreeLineage } from '../../../../../../shared/worktree/lineage-types'
-import { isEligibleWorktreeParent } from '../../worktree-parent-candidates'
+import { getEligibleWorktreeParents } from '../../worktree-parent-candidates'
+import { getIndexedAllWorktrees, getIndexedWorktreesById } from '@/store/worktree-repo-index'
 import { getCyclicProjectedWorktreeLineageIds } from '../../worktree-lineage-projection'
 import { getReorderedWorktreeIdsToUnnest } from '../../worktree-lineage-drag-drop'
 import { unnestWorktrees } from '../../worktree-unnest'
@@ -39,26 +40,24 @@ export function useWorktreeLineageDropCommit(args: {
         return target
       }
       const canAssignAll = draggedIds.every((draggedId) => {
-        const child = worktreeMap.get(draggedId)
+        const state = useAppStore.getState()
+        const children = getIndexedWorktreesById(state.worktreesByRepo, draggedId)
+        const child = children.length === 1 ? children[0] : undefined
         if (!child) {
           return false
         }
-        const candidateParent = worktreeMap.get(parentId)
-        return Boolean(
-          candidateParent &&
-          isEligibleWorktreeParent({
-            child,
-            candidateParent,
-            lineageById: worktreeLineageById,
-            worktreeMap,
-            repoMap,
-            cyclicLineageIds
-          })
-        )
+        return getEligibleWorktreeParents({
+          child,
+          worktrees: getIndexedAllWorktrees(state.worktreesByRepo),
+          lineageById: state.worktreeLineageById,
+          worktreeMap,
+          repoMap,
+          repos: state.repos
+        }).some((candidate) => candidate.id === parentId)
       })
       return canAssignAll ? target : { ...target, lineageParentId: null }
     },
-    [cyclicLineageIds, repoMap, worktreeLineageById, worktreeMap]
+    [repoMap, worktreeMap]
   )
 
   const commitWorktreeLineageParentDrop = useCallback(
