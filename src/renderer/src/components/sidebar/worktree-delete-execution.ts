@@ -1,3 +1,4 @@
+import { captureWorktreeDeleteLineage } from './worktree-delete-lineage-validation'
 import { getBlockedDeletionDependencies } from './worktree-delete-dependencies'
 import { useAppStore } from '@/store'
 import { getRepoHostSummaries } from '@/store/slices/worktrees/listing/worktree-host-ownership'
@@ -77,6 +78,9 @@ export async function runWorktreeDeletesInParallel(
   const preservedBranches: PreservedBranchCleanup[] = []
   const aggregatePreservedBranches = uniqueTargets.length > 1
   const snapshot = useAppStore.getState()
+  const matchesConfirmedLineage = options.respectLineageDependencies
+    ? captureWorktreeDeleteLineage(snapshot, uniqueTargets)
+    : null
   const owners = snapshot.repos ? getRepoHostSummaries(snapshot.repos) : null
   const hostFor = (target: (typeof uniqueTargets)[number], catalog = owners) => {
     const owner = catalog?.get(target.repoId)
@@ -153,6 +157,7 @@ export async function runWorktreeDeletesInParallel(
     const currentTarget = getWorktreeOnHostFromState(currentState, target.id, target.hostId)
     if (
       !currentTarget ||
+      (matchesConfirmedLineage && !matchesConfirmedLineage(target, currentState)) ||
       currentTarget.instanceId !== target.instanceId ||
       // Why: defensively reject a confirmed target whose repository ownership disappeared.
       (options.respectLineageDependencies && owners && !hostFor(target)) ||

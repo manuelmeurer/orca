@@ -197,6 +197,50 @@ describe('runWorktreeDeletesInParallel', () => {
     expect(mocks.state.deleteStateByWorktreeId[child.id]?.canForceDelete).toBe(false)
   })
 
+  it.each(['child', 'ancestor'] as const)(
+    'preserves a queued branch when its %s is reparented',
+    async (changed) => {
+      const root = {
+        id: 'root',
+        instanceId: 'root-instance',
+        displayName: 'Root',
+        repoId: 'root-repo',
+        path: '/root'
+      }
+      const child = {
+        ...root,
+        id: 'child',
+        instanceId: 'child-instance',
+        repoId: 'child-repo',
+        path: '/child'
+      }
+      const leaf = {
+        ...root,
+        id: 'leaf',
+        instanceId: 'leaf-instance',
+        repoId: 'leaf-repo',
+        path: '/leaf'
+      }
+      const edge = (target: typeof root, parent: typeof root) => ({
+        worktreeId: target.id,
+        worktreeInstanceId: target.instanceId,
+        parentWorktreeId: parent.id,
+        parentWorktreeInstanceId: parent.instanceId,
+        origin: 'manual',
+        capture: { source: 'manual-action', confidence: 'explicit' },
+        createdAt: 1
+      })
+      mocks.state.worktreeLineageById = { child: edge(child, root), leaf: edge(leaf, child) }
+      const deleting = runDeletesForCurrentWorktrees([root, child, leaf], {
+        respectLineageDependencies: true
+      })
+      mocks.state.worktreeLineageById =
+        changed === 'ancestor' ? { leaf: edge(leaf, child) } : { child: edge(child, root) }
+      await expect(deleting).resolves.toEqual([])
+      expect(mocks.state.removeWorktree).not.toHaveBeenCalled()
+    }
+  )
+
   it('preserves ordinary batch behavior when a nested child becomes stale', async () => {
     const child = {
       id: 'child',
@@ -277,7 +321,9 @@ describe('runWorktreeDeletesInParallel', () => {
         repoId: 'parent-repo',
         path: '/parent'
       }
-      mocks.state.removeWorktree.mockResolvedValue({ ok: false, error: 'Cannot remove child' })
+      mocks.state.removeWorktree.mockResolvedValue(
+        outcome === 'failed' ? { ok: false, error: 'Cannot remove child' } : { ok: true }
+      )
       const deleting = runDeletesForCurrentWorktrees([parent, child], {
         respectLineageDependencies: true
       })
