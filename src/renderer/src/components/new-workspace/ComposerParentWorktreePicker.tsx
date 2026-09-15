@@ -345,7 +345,9 @@ function ParentWorktreeCandidateList({
                               (repo) =>
                                 repo.id === candidate.repoId &&
                                 getRepoExecutionHostId(repo) ===
-                                  (candidate.hostId ?? executionHostId ?? 'local')
+                                  (candidate.hostId ??
+                                    executionHostId ??
+                                    repoHostId({ repos, settings }, repoId))
                             )?.displayName ?? candidate.repoId
                           }
                           color={
@@ -353,7 +355,9 @@ function ParentWorktreeCandidateList({
                               (repo) =>
                                 repo.id === candidate.repoId &&
                                 getRepoExecutionHostId(repo) ===
-                                  (candidate.hostId ?? executionHostId ?? 'local')
+                                  (candidate.hostId ??
+                                    executionHostId ??
+                                    repoHostId({ repos, settings }, repoId))
                             )?.badgeColor ?? ''
                           }
                         />

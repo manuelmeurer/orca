@@ -3,6 +3,7 @@ import {
   normalizeRuntimePathForComparison
 } from '../../../../shared/cross-platform-path'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
+import { getWorktreeLineageRuntimeOwner } from '../../../../shared/resolved-worktree-lineage'
 import { getWorktreeHostIdentity } from '../../../../shared/worktree/host-qualified-identity'
 import type { Worktree } from '../../../../shared/worktree/types'
 
@@ -31,7 +32,7 @@ export function buildWorktreeDeleteLineageDependencies<Target extends WorktreeDe
         if (
           child.id === parent.id ||
           hostFor(child) !== hostFor(parent) ||
-          child.runtimeOwnerEnvironmentId !== parent.runtimeOwnerEnvironmentId
+          getWorktreeLineageRuntimeOwner(child) !== getWorktreeLineageRuntimeOwner(parent)
         ) {
           return false
         }
