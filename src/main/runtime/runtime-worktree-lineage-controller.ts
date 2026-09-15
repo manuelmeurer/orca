@@ -9,7 +9,7 @@ import { sharesResolvedWorktreeLineageBoundary } from '../../shared/resolved-wor
 import type { OrchestrationDb } from './orchestration/db'
 import type { RuntimeStore } from './runtime-store-contract'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
-import type { ExecutionHostId } from '../../shared/execution-host'
+import { getRepoExecutionHostId, type ExecutionHostId } from '../../shared/execution-host'
 import {
   readFolderLineageParentHost,
   readWorktreeLineageParentMeta
@@ -114,11 +114,31 @@ export class RuntimeWorktreeLineageController {
     }
   }
 
+  private lineageHost(worktree: ResolvedWorktree): ExecutionHostId | undefined {
+    if (worktree.hostId) {
+      return worktree.hostId
+    }
+    const owners = this.deps
+      .getStore()
+      ?.getRepos()
+      .filter((repo) => repo.id === worktree.repoId)
+    return owners?.length === 1 ? getRepoExecutionHostId(owners[0]) : undefined
+  }
+
   validateParent(child: ResolvedWorktree, parent: ResolvedWorktree): void {
     if (child.id === parent.id) {
       throw new RuntimeLineageError('LINEAGE_PARENT_CYCLE', 'A worktree cannot parent itself.')
     }
-    if (!sharesResolvedWorktreeLineageBoundary(child, parent)) {
+    const childHost = this.lineageHost(child)
+    const parentHost = this.lineageHost(parent)
+    if (
+      !childHost ||
+      !parentHost ||
+      !sharesResolvedWorktreeLineageBoundary(
+        { ...child, hostId: childHost },
+        { ...parent, hostId: parentHost }
+      )
+    ) {
       throw new RuntimeLineageError(
         'LINEAGE_PARENT_CONTEXT_CONFLICT',
         'Parent worktree must belong to the same execution host.'
@@ -129,7 +149,7 @@ export class RuntimeWorktreeLineageController {
         .getCachedWorktrees()
         ?.filter(
           (worktree) =>
-            worktree.hostId === child.hostId &&
+            this.lineageHost(worktree) === childHost &&
             worktree.runtimeOwnerEnvironmentId === child.runtimeOwnerEnvironmentId
         )
         .map((worktree) => [worktree.id, worktree.instanceId]) ?? [
