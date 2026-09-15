@@ -20,7 +20,7 @@ import { handleWorktreeParentPickerKeyDown } from './worktree-parent-picker-keyb
 export { handleWorktreeParentPickerKeyDown } from './worktree-parent-picker-keyboard'
 import { useWorktreeActivityStatuses } from './use-worktree-activity-statuses'
 import { WorktreeParentPickerRow } from './WorktreeParentPickerRow'
-import { getEligibleWorktreeParents } from './worktree-parent-candidates'
+import { getEligibleWorktreeParents, getWorktreeOwnerHostId } from './worktree-parent-candidates'
 import {
   clampWorktreeParentPickerIndex,
   filterWorktreeParentCandidates
@@ -393,7 +393,8 @@ export function WorktreeParentPickerPopover({
                         repo={repos.find(
                           (repo) =>
                             repo.id === candidate.repoId &&
-                            getRepoExecutionHostId(repo) === (candidate.hostId ?? 'local')
+                            getRepoExecutionHostId(repo) ===
+                              getWorktreeOwnerHostId(candidate, repoMap, repos)
                         )}
                         status={statuses.get(candidate.id) ?? 'inactive'}
                         isCurrent={activeWorktreeId === candidate.id}
