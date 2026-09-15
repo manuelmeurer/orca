@@ -45,7 +45,7 @@ export function resolveWorktreeCreateParent(
       ? state.folderWorkspaces?.find((folder) => folder.id === activeScope.folderWorkspaceId)
       : undefined
   const picked = requestedParentWorktreeId
-    ? getComposerParentCandidates(state, executionHostId, activeFolder?.id ?? null).find(
+    ? getComposerParentCandidates(state, executionHostId, null).find(
         (candidate) => candidate.id === requestedParentWorktreeId
       )
     : undefined
