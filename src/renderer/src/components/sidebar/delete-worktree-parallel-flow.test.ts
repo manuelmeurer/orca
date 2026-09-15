@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => {
   const state = {
     worktreeMap: new Map<string, unknown>(),
+    worktreeLineageById: {},
     worktreeRows: [] as unknown[],
     activeWorkspaceExecutionHostId: null as string | null,
     clearWorktreeDeleteState: vi.fn((worktreeId: string) => {
@@ -28,7 +29,9 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@/store', () => ({
   useAppStore: {
-    getState: () => mocks.state
+    getState: () => mocks.state,
+    setState: (update: (state: typeof mocks.state) => Partial<typeof mocks.state>) =>
+      Object.assign(mocks.state, update(mocks.state))
   }
 }))
 
@@ -101,6 +104,106 @@ describe('runWorktreeDeletesInParallel', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
+
+  it('preserves ordinary batch behavior when a nested child becomes stale', async () => {
+    const child = {
+      id: 'child',
+      instanceId: 'child-instance',
+      displayName: 'Child',
+      repoId: 'repo',
+      path: '/parent/child'
+    }
+    const parent = {
+      id: 'parent',
+      instanceId: 'parent-instance',
+      displayName: 'Parent',
+      repoId: 'repo',
+      path: '/parent'
+    }
+    const blocker = { ...child, id: 'blocker', path: '/parent/child/deeper' }
+    const pending = deferredDeleteResult()
+    mocks.state.removeWorktree.mockImplementationOnce(() => pending.promise)
+    const deleting = runDeletesForCurrentWorktrees([blocker, child, parent])
+    mocks.state.worktreeRows = [blocker, parent, { ...child, instanceId: 'replacement' }]
+    pending.resolve({ ok: true })
+    await expect(deleting).resolves.toEqual([
+      { id: blocker.id, executionHostId: null },
+      { id: parent.id, executionHostId: null }
+    ])
+    expect(mocks.state.removeWorktree.mock.calls.map(([target]) => target.id)).toEqual([
+      blocker.id,
+      parent.id
+    ])
+  })
+
+  it('waits for a foreign-repo physical child while another branch runs', async () => {
+    const child = {
+      id: 'child',
+      instanceId: 'child-instance',
+      displayName: 'Child',
+      repoId: 'child-repo',
+      path: '/parent/child'
+    }
+    const parent = {
+      id: 'parent',
+      instanceId: 'parent-instance',
+      displayName: 'Parent',
+      repoId: 'parent-repo',
+      path: '/parent'
+    }
+    const independent = { id: 'other', displayName: 'Other', repoId: 'other-repo', path: '/other' }
+    const pendingChild = deferredDeleteResult()
+    mocks.state.removeWorktree.mockImplementation((target) =>
+      target.id === child.id ? pendingChild.promise : Promise.resolve({ ok: true })
+    )
+    const deleting = runDeletesForCurrentWorktrees([parent, child, independent], {
+      respectLineageDependencies: true
+    })
+    await vi.waitFor(() => expect(mocks.state.removeWorktree).toHaveBeenCalledTimes(2))
+    expect(mocks.state.removeWorktree.mock.calls.map(([target]) => target.id)).not.toContain(
+      parent.id
+    )
+    pendingChild.resolve({ ok: true })
+    await expect(deleting).resolves.toHaveLength(3)
+    expect(mocks.state.removeWorktree.mock.calls.at(-1)?.[0].id).toBe(parent.id)
+  })
+
+  it.each(['failed', 'stale'] as const)(
+    'blocks an ancestor when its child is %s',
+    async (outcome) => {
+      const child = {
+        id: 'child',
+        instanceId: 'child-instance',
+        displayName: 'Child',
+        repoId: 'child-repo',
+        path: '/parent/child'
+      }
+      const parent = {
+        id: 'parent',
+        instanceId: 'parent-instance',
+        displayName: 'Parent',
+        repoId: 'parent-repo',
+        path: '/parent'
+      }
+      mocks.state.removeWorktree.mockResolvedValue({ ok: false, error: 'Cannot remove child' })
+      const deleting = runDeletesForCurrentWorktrees([parent, child], {
+        respectLineageDependencies: true
+      })
+      if (outcome === 'stale') {
+        mocks.state.worktreeRows = [parent, { ...child, instanceId: 'replacement' }]
+      }
+      await expect(deleting).resolves.toEqual([])
+      expect(mocks.state.removeWorktree.mock.calls.map(([target]) => target.id)).not.toContain(
+        parent.id
+      )
+      expect(mocks.state.deleteStateByWorktreeId[parent.id]).toMatchObject({
+        isDeleting: false,
+        canForceDelete: false,
+        error: 'Not deleted because a child workspace changed or could not be deleted.'
+      })
+      expect(toast.error).toHaveBeenCalled()
+    }
+  )
 
   it('uses one snapshot prune batch for a 100-workspace delete', async () => {
     const begin = vi.fn(async (_args: { batchId: string }) => undefined)

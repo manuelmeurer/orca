@@ -13,6 +13,7 @@ type DeleteWorktreeFailureToastOptions = {
   forceDeleteReason: WorktreeForceDeleteReason | null
   lockReason?: string | null
   hasKnownChanges?: boolean
+  showViewChanges?: boolean
   onViewChanges: () => void
   onForceDelete: () => void
   worktreeId: string
@@ -74,6 +75,7 @@ export function showDeleteWorktreeFailureToast({
   forceDeleteReason,
   lockReason,
   hasKnownChanges,
+  showViewChanges,
   onViewChanges,
   onForceDelete,
   worktreeId,
@@ -96,7 +98,9 @@ export function showDeleteWorktreeFailureToast({
       <DeleteWorktreeFailureToastBody
         description={toastCopy.description}
         canForceDelete={canForceDelete}
-        showViewChanges={!isLockedWorktreeRemovalError(error) || hasKnownChanges === true}
+        showViewChanges={
+          showViewChanges ?? (!isLockedWorktreeRemovalError(error) || hasKnownChanges === true)
+        }
         onViewChanges={onViewChanges}
         onForceDelete={onForceDelete}
         toastId={id}
