@@ -78,12 +78,15 @@ export function createAssignWorktreeParent(
   get: WorktreeSliceGet
 ): WorktreeSlice['assignWorktreeParent'] {
   return async (worktreeId, args) => {
-    const ownerSettings = settingsForWorktreeOwner(get(), worktreeId)
+    const ownerSettings = settingsForWorktreeOwner(get(), worktreeId, args.executionHostId)
     try {
       applyWorktreeLineageUpdate(
         set,
         worktreeId,
-        await setWorktreeLineageForRuntime(ownerSettings, worktreeId, args)
+        await setWorktreeLineageForRuntime(ownerSettings, worktreeId, {
+          parentWorktreeId: args.parentWorktreeId
+        }),
+        args.executionHostId
       )
     } catch (err) {
       console.error('Failed to assign worktree parent:', err)
