@@ -23,7 +23,9 @@ export function getLineageUpdateOwnership(
     return (
       !executionHostId ||
       worktreeMatchesHost(worktree, executionHostId, {
-        unhostedWorktreesMatchHost: owner?.count === 1 && owner.onlyHostId === executionHostId
+        unhostedWorktreesMatchHost: owner
+          ? owner.count === 1 && owner.onlyHostId === executionHostId
+          : undefined
       })
     )
   }
