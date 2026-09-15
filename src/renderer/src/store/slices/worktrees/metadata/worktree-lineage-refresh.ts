@@ -1,3 +1,4 @@
+import { getLineageUpdateOwnership } from './worktree-lineage-update-ownership'
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../../../types'
 import type {
@@ -15,11 +16,7 @@ import {
   type ExecutionHostId
 } from '../../../../../../shared/execution-host'
 import { replaceWorktreeInRepoLists } from '../listing/worktree-owner-settings'
-import {
-  getRepoHostSummaries,
-  worktreeMatchesHost,
-  withRepoHostOwnership
-} from '../listing/worktree-host-ownership'
+import { withRepoHostOwnership } from '../listing/worktree-host-ownership'
 import { mergeLineageForHost, mergeWorkspaceLineageForHost } from './worktree-lineage-host-merge'
 import type {
   BackgroundRuntimeRefreshOptions,
@@ -167,10 +164,16 @@ export function applyWorktreeLineageUpdate(
   executionHostId?: ExecutionHostId
 ): void {
   set((s) => {
+    const { belongsToOwner, preserveExisting, preserveWorkspaceEdge } = getLineageUpdateOwnership(
+      s,
+      worktreeId,
+      result,
+      executionHostId
+    )
     const next = { ...s.worktreeLineageById }
-    if (result.lineage) {
+    if (result.lineage && !preserveExisting) {
       next[worktreeId] = result.lineage
-    } else {
+    } else if (!preserveExisting) {
       delete next[worktreeId]
     }
     const worktreesByRepo =
@@ -179,15 +182,7 @@ export function applyWorktreeLineageUpdate(
             s.worktreesByRepo,
             worktreeId,
             result.lineage,
-            executionHostId
-              ? (worktree) => {
-                  const owner = getRepoHostSummaries(s.repos).get(worktree.repoId)
-                  return worktreeMatchesHost(worktree, executionHostId, {
-                    unhostedWorktreesMatchHost:
-                      owner?.count === 1 && owner.onlyHostId === executionHostId
-                  })
-                }
-              : undefined
+            belongsToOwner
           )
         : result.updatedRemoteWorktree
           ? replaceWorktreeInRepoLists(
@@ -200,11 +195,13 @@ export function applyWorktreeLineageUpdate(
           : s.worktreesByRepo
     return {
       worktreeLineageById: next,
-      workspaceLineageByChildKey: projectWorktreeLineageToWorkspaceLineage(
-        worktreeId,
-        result.lineage,
-        s.workspaceLineageByChildKey
-      ),
+      workspaceLineageByChildKey: preserveWorkspaceEdge
+        ? s.workspaceLineageByChildKey
+        : projectWorktreeLineageToWorkspaceLineage(
+            worktreeId,
+            result.lineage,
+            s.workspaceLineageByChildKey
+          ),
       worktreesByRepo,
       sortEpoch: s.sortEpoch + 1
     }
