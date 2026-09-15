@@ -17,7 +17,7 @@ type ParentCandidateArgs = {
   repos?: readonly Repo[]
 }
 
-function getWorktreeOwnerHostId(
+export function getWorktreeOwnerHostId(
   worktree: Worktree,
   repoMap: Map<string, Pick<Repo, 'connectionId' | 'executionHostId'>>,
   repos?: readonly Repo[]
