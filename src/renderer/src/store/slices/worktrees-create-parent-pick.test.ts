@@ -89,6 +89,24 @@ describe('createWorktree composer parent pick', () => {
     )
   })
 
+  it('honors an explicit same-host parent outside the active folder subtree', async () => {
+    const parent = makeWorktree({
+      id: 'repo1::/path/parent',
+      repoId: 'repo1',
+      path: '/path/parent',
+      instanceId: 'parent-instance'
+    })
+    const store = createParentPickStore(parent)
+    store.setState({ activeWorkspaceKey: folderWorkspaceKey('folder-1') })
+    mockApi.worktrees.create.mockResolvedValue({
+      worktree: makeWorktree({ id: 'repo1::/path/child', repoId: 'repo1' })
+    })
+    await createWithParentPick(store, parent.id)
+    expect(mockApi.worktrees.create).toHaveBeenCalledWith(
+      expect.objectContaining({ parentWorkspace: worktreeWorkspaceKey(parent.id) })
+    )
+  })
+
   it('nests under a parent from another repo on the same host', async () => {
     const parent = makeWorktree({
       id: 'repo2::/path/parent',
