@@ -58,6 +58,7 @@ describe('showDeleteWorktreeFailureToast', () => {
         worktreeName: 'Child',
         identityKey,
         showViewChanges: false,
+        onDeleteAnyway: vi.fn(),
         onViewChanges: vi.fn(),
         onForceDelete: vi.fn()
       })
@@ -71,6 +72,7 @@ describe('showDeleteWorktreeFailureToast', () => {
   it('uses a persistent in-body action footer when force delete is available', () => {
     const onViewChanges = vi.fn()
     const onForceDelete = vi.fn()
+    const onDeleteAnyway = vi.fn()
 
     showDeleteWorktreeFailureToast({
       error: 'branch has changes',
@@ -78,6 +80,7 @@ describe('showDeleteWorktreeFailureToast', () => {
       forceDeleteReason: 'dirty',
       onViewChanges,
       onForceDelete,
+      onDeleteAnyway,
       worktreeId: 'wt-1',
       worktreeName: 'feature/foo'
     })
@@ -117,6 +120,7 @@ describe('showDeleteWorktreeFailureToast', () => {
       forceDeleteReason: null,
       onViewChanges,
       onForceDelete: vi.fn(),
+      onDeleteAnyway: vi.fn(),
       worktreeId: 'wt-2',
       worktreeName: 'feature/bar'
     })
@@ -139,6 +143,53 @@ describe('showDeleteWorktreeFailureToast', () => {
     expect(onViewChanges).toHaveBeenCalled()
   })
 
+  // #19334: the archive-hook refusal is the one failure a user clears by waiving rather than by
+  // fixing state, and the desktop is where most people meet it.
+  it('offers Delete Anyway when the archive hook refused the removal', () => {
+    const onDeleteAnyway = vi.fn()
+
+    showDeleteWorktreeFailureToast({
+      error: 'Archive hook failed for worktree: /w/feature — exited 23.',
+      canForceDelete: false,
+      forceDeleteReason: null,
+      canWaiveArchiveHook: true,
+      onViewChanges: vi.fn(),
+      onForceDelete: vi.fn(),
+      onDeleteAnyway,
+      worktreeId: 'wt-archive',
+      worktreeName: 'feature/archive'
+    })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      'Failed to delete workspace feature/archive',
+      // The user has to read the reason before choosing, so this toast must not expire.
+      expect.objectContaining({ duration: Infinity })
+    )
+
+    const body = renderToastBody('error')
+    expect(body.textContent).toContain('Delete Anyway')
+    expect(body.textContent).not.toContain('Force Delete')
+
+    clickButton(body, 'Delete Anyway')
+    expect(toast.dismiss).toHaveBeenCalledWith('delete-worktree-failure:wt-archive')
+    expect(onDeleteAnyway).toHaveBeenCalled()
+  })
+
+  it('does not offer Delete Anyway for an ordinary failure', () => {
+    showDeleteWorktreeFailureToast({
+      error: 'permission denied',
+      canForceDelete: false,
+      forceDeleteReason: null,
+      onViewChanges: vi.fn(),
+      onForceDelete: vi.fn(),
+      onDeleteAnyway: vi.fn(),
+      worktreeId: 'wt-plain',
+      worktreeName: 'feature/plain'
+    })
+
+    expect(renderToastBody('error').textContent).not.toContain('Delete Anyway')
+  })
+
   it('offers neither force delete nor View for a locked workspace', () => {
     const onViewChanges = vi.fn()
 
@@ -148,6 +199,7 @@ describe('showDeleteWorktreeFailureToast', () => {
       forceDeleteReason: null,
       onViewChanges,
       onForceDelete: vi.fn(),
+      onDeleteAnyway: vi.fn(),
       worktreeId: 'wt-locked',
       worktreeName: 'feature/locked'
     })
@@ -171,6 +223,7 @@ describe('showDeleteWorktreeFailureToast', () => {
       hasKnownChanges: true,
       onViewChanges: vi.fn(),
       onForceDelete: vi.fn(),
+      onDeleteAnyway: vi.fn(),
       worktreeId: 'wt-locked-dirty',
       worktreeName: 'feature/locked-dirty'
     })
