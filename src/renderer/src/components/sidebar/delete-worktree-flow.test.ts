@@ -240,7 +240,7 @@ describe('delete worktree flow', () => {
     const deletion = runWorktreeDeletesInParallel(targets)
     await vi.waitFor(() =>
       expect(mocks.state.removeWorktree).toHaveBeenCalledWith(
-        { id: 'wt-1', executionHostId: null },
+        { id: 'wt-1', executionHostId: 'local' },
         false,
         {
           suppressPreservedBranchToast: true
@@ -255,7 +255,7 @@ describe('delete worktree flow', () => {
 
     await expect(deletion).resolves.toEqual([{ id: 'wt-1', executionHostId: null }])
     expect(mocks.state.removeWorktree).not.toHaveBeenCalledWith(
-      { id: 'wt-2', executionHostId: null },
+      { id: 'wt-2', executionHostId: 'local' },
       false,
       {
         suppressPreservedBranchToast: true
@@ -302,7 +302,7 @@ describe('delete worktree flow', () => {
     expect(started).toBe(true)
     expect(mocks.state.openModal).not.toHaveBeenCalled()
     expect(mocks.state.removeWorktree).toHaveBeenCalledWith(
-      { id: 'wt-1', executionHostId: null },
+      { id: 'wt-1', executionHostId: 'local' },
       false
     )
     await vi.waitFor(() => {
@@ -338,13 +338,13 @@ describe('delete worktree flow', () => {
       // force, so it also waives the PTY-stop proof the first attempt failed.
       expect(mocks.state.removeWorktree).toHaveBeenNthCalledWith(
         2,
-        { id: 'wt-1', executionHostId: null },
+        { id: 'wt-1', executionHostId: 'local' },
         true,
         {
           allowUnverifiedPtyStop: true
         }
       )
-      expect(onDeleted).toHaveBeenCalledWith([{ id: 'wt-1', executionHostId: null }])
+      expect(onDeleted).toHaveBeenCalledWith([{ id: 'wt-1', executionHostId: 'local' }])
     })
   })
 
@@ -363,6 +363,7 @@ describe('delete worktree flow', () => {
     // workspace the user is trying to delete and erase its closed-last-terminal tombstone.
     const { activateAndRevealWorktree } = await import('@/lib/worktree-activation')
     expect(activateAndRevealWorktree).toHaveBeenCalledWith('wt-1', {
+      executionHostId: 'local',
       providesInitialSurface: true
     })
     expect(mocks.state.setRightSidebarTab).toHaveBeenCalledWith('source-control')

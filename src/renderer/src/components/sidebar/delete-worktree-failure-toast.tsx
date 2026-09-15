@@ -17,6 +17,7 @@ type DeleteWorktreeFailureToastOptions = {
   onViewChanges: () => void
   onForceDelete: () => void
   worktreeId: string
+  identityKey?: string
   worktreeName: string
 }
 
@@ -79,6 +80,7 @@ export function showDeleteWorktreeFailureToast({
   onViewChanges,
   onForceDelete,
   worktreeId,
+  identityKey,
   worktreeName
 }: DeleteWorktreeFailureToastOptions): void {
   const toastCopy = getDeleteWorktreeToastCopy(
@@ -88,7 +90,7 @@ export function showDeleteWorktreeFailureToast({
     lockReason ?? null
   )
   const showToast = toastCopy.isDestructive ? toast.error : toast.info
-  const id = deleteWorktreeFailureToastId(worktreeId)
+  const id = deleteWorktreeFailureToastId(identityKey ?? worktreeId)
 
   // Why: Sonner's native action/cancel slots share the title row and squeeze
   // multi-line delete errors. Custom content gives the copy its own line.
