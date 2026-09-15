@@ -3,6 +3,7 @@ import type { FolderWorkspace } from './folder-workspace-types'
 import {
   folderWorkspaceRepoId,
   folderWorkspaceToWorktree,
+  getFolderWorkspaceExecutionHostId,
   projectGroupIdFromRepoId
 } from './folder-workspace-worktree'
 
@@ -28,6 +29,25 @@ function makeFolderWorkspace(overrides: Partial<FolderWorkspace> = {}): FolderWo
 }
 
 describe('folderWorkspaceToWorktree', () => {
+  it.each([
+    {
+      source: 'an explicit host',
+      overrides: { executionHostId: 'runtime:dev' as const },
+      hostId: 'runtime:dev'
+    },
+    {
+      source: 'a durable SSH connection',
+      overrides: { connectionId: 'build box' },
+      hostId: 'ssh:build%20box'
+    },
+    { source: 'neither host field', overrides: {}, hostId: 'local' }
+  ])('derives the projection host from $source', ({ overrides, hostId }) => {
+    const workspace = makeFolderWorkspace(overrides)
+
+    expect(getFolderWorkspaceExecutionHostId(workspace)).toBe(hostId)
+    expect(folderWorkspaceToWorktree(workspace).hostId).toBe(hostId)
+  })
+
   it('projects attached issue tasks without creating linked PR metadata', () => {
     const githubIssue = folderWorkspaceToWorktree(
       makeFolderWorkspace({

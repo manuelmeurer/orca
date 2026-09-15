@@ -154,20 +154,20 @@ export function findPendingLinkedWorkItemCreationId(
   pendingCreations: Readonly<Record<string, PendingWorktreeCreation>>,
   request: Pick<
     WorktreeCreationRequest,
-    'repoId' | 'linkedIssue' | 'linkedPR' | 'workspaceRunContext'
+    'repoId' | 'linkedIssue' | 'linkedPR' | 'workspaceRunContext' | 'executionHostId'
   >
 ): string | null {
   if (request.linkedIssue == null && request.linkedPR == null) {
     return null
   }
-  const hostId = request.workspaceRunContext?.hostId ?? null
+  const hostId = request.workspaceRunContext?.hostId ?? request.executionHostId ?? null
   const match = Object.values(pendingCreations).find((entry) => {
     const pending = entry.request
     return (
       pending.repoId === request.repoId &&
       pending.linkedIssue === request.linkedIssue &&
       pending.linkedPR === request.linkedPR &&
-      (pending.workspaceRunContext?.hostId ?? null) === hostId
+      (pending.workspaceRunContext?.hostId ?? pending.executionHostId ?? null) === hostId
     )
   })
   return match?.creationId ?? null

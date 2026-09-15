@@ -1,9 +1,15 @@
 import { useAppStore } from '@/store'
-import { getWorktreeOnHostFromState } from '@/store/selectors'
+import { getRepoHostSummaries } from '@/store/slices/worktrees/listing/worktree-host-ownership'
 import {
-  isPathInsideOrEqual,
-  normalizeRuntimePathForComparison
-} from '../../../../shared/cross-platform-path'
+  clearWorktreeDeleteTargetState,
+  showBlockedWorktreeDelete
+} from './worktree-delete-target-state'
+import {
+  buildWorktreeDeleteLineageDependencies,
+  hasWorktreeDeleteLineageCycle,
+  isStrictWorktreeDescendantPath
+} from './worktree-delete-lineage-dependencies'
+import { getWorktreeOnHostFromState } from '@/store/selectors'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import {
@@ -22,28 +28,12 @@ import type { WorktreeDeleteWithToastOptions } from './worktree-delete-request'
 import { beginWorktreeSnapshotPruneBatch } from './worktree-snapshot-prune-batch'
 import { runWorktreeDeleteWithToast } from './run-worktree-delete-with-toast'
 
-function isStrictDescendantPath(parentPath: string, childPath: string): boolean {
-  return (
-    normalizeRuntimePathForComparison(parentPath) !==
-      normalizeRuntimePathForComparison(childPath) && isPathInsideOrEqual(parentPath, childPath)
-  )
-}
-
-function clearWorktreeDeleteTargetState(target: Pick<Worktree, 'id' | 'hostId'>): void {
-  const state = useAppStore.getState()
-  if (target.hostId) {
-    state.clearWorktreeDeleteState(target.id, target.hostId)
-  } else {
-    state.clearWorktreeDeleteState(target.id)
-  }
-}
-
 export async function runWorktreeDeletesInParallel(
   targets: readonly Pick<
     Worktree,
-    'id' | 'instanceId' | 'displayName' | 'repoId' | 'path' | 'hostId'
+    'id' | 'instanceId' | 'displayName' | 'repoId' | 'path' | 'hostId' | 'runtimeOwnerEnvironmentId'
   >[],
-  options: WorktreeDeleteWithToastOptions = {}
+  options: WorktreeDeleteWithToastOptions & { respectLineageDependencies?: boolean } = {}
 ): Promise<WorktreeRemovalTarget[]> {
   // A destructive command must run once per identity even if a refresh duplicated rows.
   const uniqueTargets = Array.from(
@@ -75,6 +65,12 @@ export async function runWorktreeDeletesInParallel(
   }
   const preservedBranches: PreservedBranchCleanup[] = []
   const aggregatePreservedBranches = uniqueTargets.length > 1
+  const snapshot = useAppStore.getState()
+  const owners = snapshot.repos ? getRepoHostSummaries(snapshot.repos) : null
+  const hostFor = (target: (typeof uniqueTargets)[number]) => {
+    const owner = owners?.get(target.repoId)
+    return target.hostId ?? (owner?.count === 1 ? owner.onlyHostId : undefined)
+  }
   let listChanged = false
   const pendingSnapshotPruneBatch =
     uniqueTargets.length > 1 ? beginWorktreeSnapshotPruneBatch() : null
@@ -103,74 +99,136 @@ export async function runWorktreeDeletesInParallel(
       }
     }
   }
-  let groupResults: WorktreeRemovalTarget[][]
-  try {
-    groupResults = await Promise.all(
-      Array.from(groups.values()).map(async (group) => {
-        const deletedInGroup: WorktreeRemovalTarget[] = []
-        const failedInGroup: (typeof group)[number][] = []
-        const started: { path: string; settled: Promise<void> }[] = []
-        // Why only this machine's repos run in parallel: its host serializes the branch cleanup per
-        // repo and limits concurrent deletes, while SSH and paired (possibly older) hosts race the
-        // repo's ref locks when one repo deletes in parallel (#2259).
-        const serialized = (group[0]?.hostId ?? LOCAL_EXECUTION_HOST_ID) !== LOCAL_EXECUTION_HOST_ID
-        for (const target of group) {
-          // A descendant's outcome decides whether its ancestor may be deleted at all.
-          const descendants = started.filter((earlier) =>
-            isStrictDescendantPath(target.path, earlier.path)
-          )
-          if (descendants.length > 0) {
-            await Promise.all(descendants.map((earlier) => earlier.settled))
-          }
-          const settled = runInWorktreeDeleteTurn(target.id, async () => {
-            // A queued target may be recreated while an earlier repo sibling is deleting.
-            // Why by host (STA-4343): the id-keyed map keeps ONE row per `repoId::path`,
-            // so on a two-host collision it can hand back the other host's row — whose
-            // instanceId never matches, silently dropping a delete the user confirmed.
-            const currentTarget = getWorktreeOnHostFromState(
-              useAppStore.getState(),
-              target.id,
-              target.hostId
-            )
-            if (!currentTarget || currentTarget.instanceId !== target.instanceId) {
-              clearWorktreeDeleteTargetState(target)
-              listChanged = true
-              return
-            }
-            if (failedInGroup.some((failed) => isStrictDescendantPath(target.path, failed.path))) {
-              clearWorktreeDeleteTargetState(target)
-              return
-            }
-            const deleted = await runWorktreeDeleteWithToast(
-              toWorktreeRemovalTarget(target),
-              target.displayName,
-              {
-                ...options,
-                focusSuccessorOnDelete: false,
-                suppressPreservedBranchToast: aggregatePreservedBranches,
-                ...(snapshotPruneBatch ? { snapshotPruneBatchId: snapshotPruneBatch.batchId } : {}),
-                onPreservedBranch: (branch) => {
-                  preservedBranches.push(branch)
-                  options.onPreservedBranch?.(branch)
-                }
-              }
-            )
-            if (deleted) {
-              deletedInGroup.push(toWorktreeRemovalTarget(target))
-            } else {
-              // A failed child makes deleting its ancestor unsafe because the child lives below it.
-              failedInGroup.push(target)
-            }
-          })
-          started.push({ path: target.path, settled })
-          if (serialized) {
-            await settled
-          }
-        }
-        await Promise.all(started.map((entry) => entry.settled))
-        return deletedInGroup
-      })
+  const deletedTargets: WorktreeRemovalTarget[] = []
+  const failedTargets = new Set<string>()
+  const completed = new Map<string, Promise<void>>()
+  const dependencies: Map<string, typeof uniqueTargets> = options.respectLineageDependencies
+    ? buildWorktreeDeleteLineageDependencies(uniqueTargets, hostFor, snapshot)
+    : new Map()
+  const blockTarget = (target: (typeof uniqueTargets)[number]): void => {
+    failedTargets.add(getWorktreeHostIdentity(target))
+    showBlockedWorktreeDelete(target)
+  }
+  const executeTarget = async (target: (typeof uniqueTargets)[number]): Promise<void> => {
+    const identity = getWorktreeHostIdentity(target)
+    const currentTarget = getWorktreeOnHostFromState(
+      useAppStore.getState(),
+      target.id,
+      target.hostId
     )
+    if (
+      !currentTarget ||
+      currentTarget.instanceId !== target.instanceId ||
+      // Why: defensively reject a confirmed target whose repository ownership disappeared.
+      (options.respectLineageDependencies && owners && !hostFor(target)) ||
+      hostFor(currentTarget) !== hostFor(target) ||
+      currentTarget.runtimeOwnerEnvironmentId !== target.runtimeOwnerEnvironmentId
+    ) {
+      clearWorktreeDeleteTargetState(target)
+      if (options.respectLineageDependencies) {
+        failedTargets.add(identity)
+      }
+      listChanged = true
+      return
+    }
+    const blocked = options.respectLineageDependencies
+      ? dependencies
+          .get(identity)
+          ?.some((child) => failedTargets.has(getWorktreeHostIdentity(child)))
+      : uniqueTargets.some(
+          (child) =>
+            child.repoId === target.repoId &&
+            child.hostId === target.hostId &&
+            failedTargets.has(getWorktreeHostIdentity(child)) &&
+            isStrictWorktreeDescendantPath(target.path, child.path)
+        )
+    if (blocked) {
+      if (options.respectLineageDependencies) {
+        blockTarget(target)
+      } else {
+        clearWorktreeDeleteTargetState(target)
+      }
+      return
+    }
+    const deleted = await runWorktreeDeleteWithToast(
+      toWorktreeRemovalTarget(target),
+      target.displayName,
+      {
+        ...options,
+        focusSuccessorOnDelete: false,
+        suppressPreservedBranchToast: aggregatePreservedBranches,
+        ...(snapshotPruneBatch ? { snapshotPruneBatchId: snapshotPruneBatch.batchId } : {}),
+        onPreservedBranch: (branch) => {
+          preservedBranches.push(branch)
+          options.onPreservedBranch?.(branch)
+        }
+      }
+    )
+    if (deleted) {
+      deletedTargets.push(toWorktreeRemovalTarget(target))
+      return
+    }
+    failedTargets.add(identity)
+  }
+  const schedule = (
+    target: (typeof uniqueTargets)[number],
+    ancestors = new Set<string>()
+  ): Promise<void> => {
+    const identity = getWorktreeHostIdentity(target)
+    if (ancestors.has(identity)) {
+      blockTarget(target)
+      return Promise.resolve()
+    }
+    const pending = completed.get(identity)
+    if (pending) {
+      return pending
+    }
+    const nextAncestors = new Set([...ancestors, identity])
+    const operation = Promise.resolve().then(async () => {
+      await Promise.all(
+        (dependencies.get(identity) ?? []).map((child) => schedule(child, nextAncestors))
+      )
+      await runInWorktreeDeleteTurn(composeWorktreeHostIdentity(target.hostId, target.repoId), () =>
+        runInWorktreeDeleteTurn(target.id, () => executeTarget(target))
+      )
+    })
+    completed.set(identity, operation)
+    return operation
+  }
+  try {
+    if (options.respectLineageDependencies) {
+      if (hasWorktreeDeleteLineageCycle(uniqueTargets, dependencies)) {
+        uniqueTargets.forEach(blockTarget)
+      } else {
+        await Promise.all(uniqueTargets.map((target) => schedule(target)))
+      }
+    } else {
+      await Promise.all(
+        Array.from(groups.values()).map(async (group) => {
+          const started: { path: string; settled: Promise<void> }[] = []
+          // Why only this machine's repos run in parallel: its host serializes the branch cleanup per
+          // repo and limits concurrent deletes, while SSH and paired (possibly older) hosts race the
+          // repo's ref locks when one repo deletes in parallel (#2259).
+          const serialized =
+            (group[0]?.hostId ?? LOCAL_EXECUTION_HOST_ID) !== LOCAL_EXECUTION_HOST_ID
+          for (const target of group) {
+            // A descendant's outcome decides whether its ancestor may be deleted at all.
+            const descendants = started.filter((earlier) =>
+              isStrictWorktreeDescendantPath(target.path, earlier.path)
+            )
+            if (descendants.length > 0) {
+              await Promise.all(descendants.map((earlier) => earlier.settled))
+            }
+            const settled = runInWorktreeDeleteTurn(target.id, () => executeTarget(target))
+            started.push({ path: target.path, settled })
+            if (serialized) {
+              await settled
+            }
+          }
+          await Promise.all(started.map((entry) => entry.settled))
+        })
+      )
+    }
   } finally {
     if (snapshotPruneBatch) {
       try {
@@ -184,9 +242,9 @@ export async function runWorktreeDeletesInParallel(
     showWorkspaceListChangedToast()
   }
   const deletedIdentities = new Set(
-    groupResults
-      .flat()
-      .map((target) => composeWorktreeHostIdentity(target.executionHostId ?? undefined, target.id))
+    deletedTargets.map((target) =>
+      composeWorktreeHostIdentity(target.executionHostId ?? undefined, target.id)
+    )
   )
   // Intermediate focus can spawn a terminal in another target that is still queued.
   if (activeWorktreeIdBefore) {

@@ -106,6 +106,9 @@ export function buildLocalWorktreeCreateArgs(
 ): CreateWorktreeArgs {
   return {
     repoId: request.repoId,
+    ...(request.options?.executionHostId
+      ? { executionHostId: request.options.executionHostId }
+      : {}),
     ...sharedCreateFields(request, attempt),
     ...(request.startup ? { startup: request.startup } : {}),
     ...(request.creationId ? { creationId: request.creationId } : {})

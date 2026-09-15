@@ -10,6 +10,7 @@ import { createRuntimeFolderWorktree } from './runtime-folder-worktree-create'
 import { createRuntimeLocalManagedWorktree } from './runtime-local-worktree-create'
 import type { PreparationRearmHolder } from '../worktree-create-preparation'
 import { prepareRuntimeLocalWorktreeSetup } from './runtime-local-worktree-setup'
+import { buildRuntimeWorktreeSetupReceipt } from './runtime-worktree-create-setup-receipt'
 import { invalidateAuthorizedRootsCacheForRepo } from '../ipc/filesystem-auth'
 import { startRuntimeLocalWorktreeTerminals } from './runtime-local-worktree-terminal-startup'
 import { trackRuntimeWorkspaceCreate } from '../workspace-create-telemetry'
@@ -118,7 +119,13 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
     }
     const lineageInput =
       args.lineage || args.comment ? { ...args.lineage, comment: args.comment } : undefined
-    const lineageResolution = await this.resolveLineageForWorktreeCreate(lineageInput)
+    const lineageResolution = this.worktreeLineage.validateCreate(
+      await this.resolveLineageForWorktreeCreate(lineageInput),
+      createRoute.hostId
+    )
+    const recordCreatedLineage = (
+      worktree: Pick<CreateWorktreeResult['worktree'], 'id' | 'instanceId'>
+    ) => this.recordCreatedWorktreeLineage(worktree, lineageResolution, createRoute.hostId)
     if (createRoute.kind === 'runtime') {
       throw new ExecutionHostNotDispatchableError(createRoute.hostId)
     }
@@ -136,7 +143,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         ...(effectiveDraftPaste ? { startupDraftPaste: effectiveDraftPaste } : {}),
         timing
       })
-      const recordedLineage = this.recordCreatedWorktreeLineage(result.worktree, lineageResolution)
+      const recordedLineage = recordCreatedLineage(result.worktree)
       this.emitWorktreeLifecycle({
         kind: 'created',
         worktreeId: result.worktree.id,
@@ -175,8 +182,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         this.getOrStartRemoteTrackingBaseRefresh(path, base, ...options),
       fetchRemote: (path, remote, ...options) =>
         this.fetchRemoteWithCache(path, remote, ...options),
-      onWorktreeMetadataPersisted: (persistedWorktree) =>
-        this.recordCreatedWorktreeLineage(persistedWorktree, lineageResolution),
+      onWorktreeMetadataPersisted: recordCreatedLineage,
       rearm,
       timing
     })
@@ -266,6 +272,15 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       path: worktree.path,
       branch: worktree.branch
     })
+    const setupReceipt = buildRuntimeWorktreeSetupReceipt(args.awaitTerminalProvisioning, {
+      effectiveDecision,
+      hookFound,
+      shouldRunSetup,
+      didSpawnSetup,
+      didStartInProcessSetupHook,
+      waitForAgentStartup: setup?.waitForAgentStartup,
+      terminalHandle: setupTerminalHandle
+    })
     return {
       worktree: {
         ...worktree,
@@ -277,27 +292,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       },
       ...(lineageInput ? { lineage, workspaceLineage, warnings: lineageWarnings } : {}),
       ...(returnedSetup ? { setup: returnedSetup } : {}),
-      ...(args.awaitTerminalProvisioning
-        ? {
-            setupReceipt: {
-              requested: effectiveDecision,
-              hookFound,
-              startupPolicy: setup?.waitForAgentStartup
-                ? ('wait-for-setup' as const)
-                : ('start-immediately' as const),
-              state: !hookFound
-                ? ('not_configured' as const)
-                : effectiveDecision === 'skip' || !shouldRunSetup
-                  ? ('skipped' as const)
-                  : // Why: the in-process hook is already executing, so reporting
-                    // spawn_failed would strand callers that retry on it.
-                    didSpawnSetup || didStartInProcessSetupHook
-                    ? ('running' as const)
-                    : ('spawn_failed' as const),
-              ...(setupTerminalHandle ? { terminalHandle: setupTerminalHandle } : {})
-            }
-          }
-        : {}),
+      ...(setupReceipt ? { setupReceipt } : {}),
       ...(defaultTabs ? { defaultTabs } : {}),
       ...(warning ? { warning } : {}),
       ...(localCreate.baseFallback ? { baseFallback: localCreate.baseFallback } : {}),

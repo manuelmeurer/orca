@@ -6,7 +6,7 @@ import {
   navigationTargetsHost,
   resolveRuntimeNavigationTarget
 } from '../../shared/runtime-navigation'
-import { getRepoExecutionHostId } from '../../shared/execution-host'
+import { getRepoExecutionHostId, type ExecutionHostId } from '../../shared/execution-host'
 import type { Repo } from '../../shared/repo-types'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { RuntimeTerminalWait } from '../../shared/runtime-terminal-contracts'
@@ -184,13 +184,14 @@ export class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntimeWithListM
 
   protected recordCreatedWorktreeLineage(
     worktree: Pick<Worktree, 'id' | 'instanceId'>,
-    lineageResolution: WorktreeLineageResolution
+    lineageResolution: WorktreeLineageResolution,
+    hostId: ExecutionHostId
   ): {
     lineage: WorktreeLineage | null
     workspaceLineage: WorkspaceLineage | null
     warnings: WorktreeLineageWarning[]
   } {
-    return recordCreatedWorktreeLineageState(this.store, worktree, lineageResolution)
+    return recordCreatedWorktreeLineageState(this.store, worktree, lineageResolution, hostId)
   }
 
   protected pasteStartupDraftWhenReady(handle: string, draft: WorktreeStartupDraftPaste): void {
