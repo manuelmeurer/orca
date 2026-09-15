@@ -1,3 +1,4 @@
+import { hasWorktreeParentLink } from '../../components/sidebar/worktree-context-menu-policy'
 import { applyWorktreeLineageUpdate } from './worktrees/metadata/worktree-lineage-refresh'
 import { getProjectedWorktreeLineage } from '../../components/sidebar/worktree-lineage-projection'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -80,6 +81,13 @@ describe('worktree lineage state', () => {
       expect(state.workspaceLineageByChildKey[workspaceLineage.childWorkspaceKey]).toBe(
         workspaceLineage
       )
+      expect(
+        hasWorktreeParentLink(
+          state.worktreesByRepo.repo1[0],
+          state.worktreeLineageById,
+          state.workspaceLineageByChildKey
+        )
+      ).toBe(assigning)
       expect(state.worktreesByRepo.repo1[1]).toBe(foreign)
       expect(
         getProjectedWorktreeLineage(state.worktreesByRepo.repo1[0], state.worktreeLineageById)
