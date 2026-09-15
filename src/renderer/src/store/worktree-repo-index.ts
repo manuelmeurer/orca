@@ -1,3 +1,4 @@
+import { getWorktreeLineageRuntimeOwner } from '../../../shared/resolved-worktree-lineage'
 import type { Repo } from '../../../shared/repo-types'
 import type { Worktree } from '../../../shared/worktree/types'
 import {
@@ -40,10 +41,7 @@ function getWorktreeSnapshot(
         rows.filter(
           (row) =>
             (!row.runtimeOwnerEnvironmentId && !row.hostId) ||
-            row.runtimeOwnerEnvironmentId === owner.runtimeOwnerEnvironmentId ||
-            (!row.runtimeOwnerEnvironmentId &&
-              owner.runtimeOwnerEnvironmentId &&
-              row.hostId === `runtime:${encodeURIComponent(owner.runtimeOwnerEnvironmentId)}`)
+            getWorktreeLineageRuntimeOwner(row) === owner.runtimeOwnerEnvironmentId
         )
       ])
     )

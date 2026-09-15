@@ -5,12 +5,18 @@ import { getWorktreeHostIdentity } from '../../../../shared/worktree/host-qualif
 import { showDeleteWorktreeFailureToast } from './delete-worktree-failure-toast'
 
 export function showBlockedWorktreeDelete(
-  target: Pick<Worktree, 'id' | 'hostId' | 'displayName'>
+  target: Pick<Worktree, 'id' | 'hostId' | 'displayName'>,
+  cyclic = false
 ): void {
-  const error = translate(
-    'worktree.delete.blockedByChild',
-    'Not deleted because a child workspace changed or could not be deleted.'
-  )
+  const error = cyclic
+    ? translate(
+        'worktree.delete.conflictingDependencies',
+        'Not deleted because workspace nesting conflicts with folder containment. Unnest these workspaces and retry.'
+      )
+    : translate(
+        'worktree.delete.blockedByChild',
+        'Not deleted because a child workspace changed or could not be deleted.'
+      )
   const key = target.hostId ? getWorktreeHostIdentity(target) : target.id
   useAppStore.setState((state) => ({
     deleteStateByWorktreeId: {
@@ -29,6 +35,7 @@ export function showBlockedWorktreeDelete(
     canForceDelete: false,
     forceDeleteReason: null,
     worktreeId: target.id,
+    identityKey: key,
     worktreeName: target.displayName,
     showViewChanges: false,
     onViewChanges: () => {},

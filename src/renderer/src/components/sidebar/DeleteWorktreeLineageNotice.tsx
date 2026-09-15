@@ -1,3 +1,4 @@
+import { getRepoHostSummaries } from '@/store/slices/worktrees/listing/worktree-host-ownership'
 import { Workflow } from 'lucide-react'
 import { useState, type JSX } from 'react'
 import { useAppStore } from '@/store'
@@ -20,22 +21,26 @@ export function DeleteWorktreeLineageNotice({
 }: DeleteWorktreeLineageNoticeProps): JSX.Element | null {
   const [expanded, setExpanded] = useState(false)
   const repos = useAppStore((state) => state.repos)
-  const repoFor = (child: Worktree) =>
-    repos.find(
-      (repo) =>
-        repo.id === child.repoId && getRepoExecutionHostId(repo) === (child.hostId ?? 'local')
-    )
-  const affectedRepos = new Map(
-    descendants.map((child) => [
-      `${child.hostId ?? ''}|${child.repoId}`,
-      {
-        child,
-        count: descendants.filter(
-          (candidate) => candidate.repoId === child.repoId && candidate.hostId === child.hostId
-        ).length
-      }
-    ])
+  const owners = getRepoHostSummaries(repos)
+  const repoByIdentity = new Map(
+    repos.map((repo) => [`${getRepoExecutionHostId(repo)}|${repo.id}`, repo])
   )
+  const repoKey = (child: Worktree) => {
+    const owner = owners.get(child.repoId)
+    const hostId = child.hostId ?? (owner?.count === 1 ? owner.onlyHostId : undefined)
+    return `${hostId ?? ''}|${child.repoId}`
+  }
+  const repoFor = (child: Worktree) => repoByIdentity.get(repoKey(child))
+  const affectedRepos = new Map<string, { child: Worktree; count: number }>()
+  for (const child of descendants) {
+    const key = repoKey(child)
+    const entry = affectedRepos.get(key)
+    if (entry) {
+      entry.count += 1
+    } else {
+      affectedRepos.set(key, { child, count: 1 })
+    }
+  }
   const childWorkspaceCount = descendants.length
 
   if (childWorkspaceCount === 0) {

@@ -1,7 +1,10 @@
+import type { Repo } from '../../../../shared/repo-types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
+  const repositoryState: { repos: Repo[] | undefined } = { repos: undefined }
   const state = {
+    ...repositoryState,
     worktreeMap: new Map<string, unknown>(),
     worktreeLineageById: {},
     worktreeRows: [] as unknown[],
@@ -92,8 +95,10 @@ describe('runWorktreeDeletesInParallel', () => {
     mocks.state.removeWorktree.mockReset().mockResolvedValue({ ok: true })
     mocks.state.clearWorktreeDeleteState.mockClear()
     mocks.state.markWorktreesDeleting.mockClear()
+    mocks.state.repos = undefined
     mocks.state.worktreeMap = new Map()
     mocks.state.worktreeRows = []
+    mocks.state.worktreeLineageById = {}
     mocks.state.activeWorkspaceExecutionHostId = null
     mocks.state.deleteStateByWorktreeId = {}
     vi.mocked(toast.error).mockClear()
@@ -103,6 +108,93 @@ describe('runWorktreeDeletesInParallel', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('rejects a queued hostless target when its sole repository owner changes', async () => {
+    const repo: Repo = {
+      id: 'repo',
+      path: '/repo',
+      displayName: 'Repo',
+      badgeColor: '',
+      addedAt: 1,
+      connectionId: null,
+      executionHostId: 'ssh:old'
+    }
+    mocks.state.repos = [repo]
+    const target = {
+      id: 'target',
+      instanceId: 'same-instance',
+      displayName: 'Target',
+      repoId: repo.id,
+      path: '/target'
+    }
+    const deleting = runDeletesForCurrentWorktrees([target], { respectLineageDependencies: true })
+    mocks.state.repos = [{ ...repo, executionHostId: 'ssh:new' }]
+    await expect(deleting).resolves.toEqual([])
+    expect(mocks.state.removeWorktree).not.toHaveBeenCalled()
+  })
+
+  it('pins a legacy target to the confirmed repository host', async () => {
+    mocks.state.repos = [
+      {
+        id: 'repo',
+        path: '/repo',
+        displayName: 'Repo',
+        badgeColor: '',
+        addedAt: 1,
+        connectionId: null,
+        executionHostId: 'ssh:old'
+      }
+    ]
+    const target = {
+      id: 'target',
+      instanceId: 'same-instance',
+      displayName: 'Target',
+      repoId: 'repo',
+      path: '/target'
+    }
+    await runDeletesForCurrentWorktrees([target], { respectLineageDependencies: true })
+    expect(mocks.state.removeWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'target', executionHostId: 'ssh:old' }),
+      expect.anything()
+    )
+  })
+
+  it('preserves conflicting nesting and containment while deleting an independent branch', async () => {
+    const parent = {
+      id: 'parent',
+      instanceId: 'parent-instance',
+      displayName: 'Parent',
+      repoId: 'parent-repo',
+      path: '/outer/inner'
+    }
+    const child = {
+      id: 'child',
+      instanceId: 'child-instance',
+      displayName: 'Child',
+      repoId: 'child-repo',
+      path: '/outer'
+    }
+    const independent = { id: 'other', displayName: 'Other', repoId: 'other-repo', path: '/other' }
+    mocks.state.worktreeLineageById = {
+      child: {
+        worktreeId: child.id,
+        worktreeInstanceId: child.instanceId,
+        parentWorktreeId: parent.id,
+        parentWorktreeInstanceId: parent.instanceId,
+        origin: 'manual',
+        capture: { source: 'manual-action', confidence: 'explicit' },
+        createdAt: 1
+      }
+    }
+    await expect(
+      runDeletesForCurrentWorktrees([parent, child, independent], {
+        respectLineageDependencies: true
+      })
+    ).resolves.toEqual([{ id: independent.id, executionHostId: null }])
+    expect(mocks.state.removeWorktree).toHaveBeenCalledTimes(1)
+    expect(mocks.state.deleteStateByWorktreeId[parent.id]?.error).toContain('Unnest')
+    expect(mocks.state.deleteStateByWorktreeId[child.id]?.canForceDelete).toBe(false)
   })
 
   it('preserves ordinary batch behavior when a nested child becomes stale', async () => {
