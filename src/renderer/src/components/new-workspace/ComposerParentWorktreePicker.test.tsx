@@ -120,6 +120,7 @@ function makeRepo(id: string): Repo {
 
 function makeWorktree(overrides: Partial<Worktree> & { id: string }): Worktree {
   return {
+    instanceId: `${overrides.id}-instance`,
     repoId: REPO_ID,
     path: `/work/${overrides.id}`,
     head: 'abc123',
@@ -204,14 +205,12 @@ describe('ComposerParentWorktreePicker', () => {
     render(<ComposerParentWorktreePicker repoId={REPO_ID} value="alpha" onChange={vi.fn()} />)
 
     // The closed trigger resolves one name from the shared index; it never enumerates.
-    expect(indexSpies.getIndexedWorktreeById).toHaveBeenCalled()
     expect(indexSpies.getIndexedAllWorktrees).not.toHaveBeenCalled()
     expect(indexSpies.getIndexedWorktreeMap).not.toHaveBeenCalled()
 
     fireEvent.click(trigger())
 
     expect(indexSpies.getIndexedAllWorktrees).toHaveBeenCalled()
-    expect(indexSpies.getIndexedWorktreeMap).toHaveBeenCalled()
   })
 
   it('shows "No parent" on the closed trigger when nothing is picked', () => {
@@ -255,7 +254,7 @@ describe('ComposerParentWorktreePicker', () => {
     expect(rows()).toHaveLength(0)
   })
 
-  it('excludes archived worktrees and worktrees from another repo', () => {
+  it('excludes archived worktrees and includes sibling repositories', () => {
     seed(
       [
         makeWorktree({ id: 'alpha', displayName: 'Alpha' }),
@@ -270,10 +269,10 @@ describe('ComposerParentWorktreePicker', () => {
 
     expect(candidateLabels().join(' ')).toContain('Alpha')
     expect(candidateLabels().join(' ')).not.toContain('Archived')
-    expect(candidateLabels().join(' ')).not.toContain('Other repo')
+    expect(candidateLabels().join(' ')).toContain('Other repo')
   })
 
-  it('excludes candidates on another execution host or project', () => {
+  it('excludes other hosts and includes sibling projects', () => {
     seed([
       makeWorktree({ id: 'same', displayName: 'Same host', hostId: 'local', projectId: 'proj1' }),
       makeWorktree({
@@ -303,7 +302,7 @@ describe('ComposerParentWorktreePicker', () => {
 
     expect(candidateLabels().join(' ')).toContain('Same host')
     expect(candidateLabels().join(' ')).not.toContain('Other host')
-    expect(candidateLabels().join(' ')).not.toContain('Other project')
+    expect(candidateLabels().join(' ')).toContain('Other project')
   })
 
   // A worktree with no recorded hostId inherits its repo's host, which is the child's host too.

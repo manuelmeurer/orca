@@ -27,6 +27,7 @@ import { completeWorktreeCreation } from '@/lib/worktree-creation-completion'
 import { showWorktreeCreationReadyToast } from '@/lib/worktree-creation-ready-toast'
 import { mountCreatedWorktreeStartupTabsInBackground } from '@/lib/worktree-creation-background-mount'
 import { ensureWebRuntimeWorktreeTerminalAfterWake } from '@/lib/web-runtime-worktree-terminal-after-wake'
+import { resolveWorktreeCreationExecutionHostId } from './worktree-creation-execution-host'
 
 // Why: activePendingCreationId can outlive the terminal route when the user
 // switches app views; only the terminal route renders the creation panel.
@@ -63,6 +64,7 @@ export async function executeWorktreeCreation(
 
   let result: CreateWorktreeResult
   try {
+    const executionHostId = resolveWorktreeCreationExecutionHostId(preparedRequest)
     const provisionedRoot = getProvisionedRootCreateOptions(preparedRequest)
     const structuredLaunch = preparedRequest.agentLaunchRoute === 'structured-native-chat'
     const backendStartup =
@@ -96,8 +98,7 @@ export async function executeWorktreeCreation(
         preparedRequest.linkedGiteaPR,
         preparedRequest.compareBaseRef,
         {
-          executionHostId:
-            preparedRequest.workspaceRunContext?.hostId ?? preparedRequest.executionHostId,
+          executionHostId,
           ...(preparedRequest.nameWasGenerated ? { nameWasGenerated: true } : {}),
           ...(preparedRequest.displayNameKind
             ? { displayNameKind: preparedRequest.displayNameKind }

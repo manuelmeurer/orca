@@ -1,4 +1,3 @@
-import { runtimeTargetForExecutionHostId } from '@/runtime/runtime-client-target'
 import { repoHostId } from '../listing/worktree-host-ownership'
 import { toRuntimeExecutionHostId } from '../../../../../../shared/execution-host'
 import type { WorktreeSlice } from '../../worktree-helpers'
@@ -21,7 +20,7 @@ import { requestWorktreeBaseFallbackNotice } from '@/components/worktree-base-fa
 import { showLocalBaseRefRefreshToast } from './local-base-ref-refresh-toast'
 import { settingsForRepoOwner } from '../listing/worktree-owner-settings'
 import { applyCreatedWorktree } from './created-worktree-state-merge'
-import { isRuntimeLineageParentMissingError } from '../listing/runtime-worktree-rpc-errors'
+import { isRuntimeLineageParentRejectedBeforeCreate } from '../listing/runtime-worktree-rpc-errors'
 import {
   buildLocalWorktreeCreateArgs,
   buildRuntimeWorktreeCreateParams,
@@ -70,7 +69,7 @@ async function runCreateAttempt(
   try {
     return { result: await create(attempt.parentWorkspace), droppedParent: false }
   } catch (error) {
-    if (!attempt.parentWorkspace || !isRuntimeLineageParentMissingError(error)) {
+    if (!attempt.parentWorkspace || !isRuntimeLineageParentRejectedBeforeCreate(error)) {
       throw error
     }
     return { result: await create(undefined), droppedParent: true }
@@ -158,7 +157,16 @@ export function createCreateWorktree(
     }
     try {
       // Why outside the retry loop: a branch-name conflict retry must not re-warn about the same dropped pick.
-      const parent = resolveWorktreeCreateParent(get(), repoId, options?.parentWorktreeId)
+      const executionHostId =
+        options?.provisionedRoot?.executionHostId ??
+        repoHostId(get(), repoId, options?.executionHostId)
+      request.options = { ...options, executionHostId }
+      const parent = resolveWorktreeCreateParent(
+        get(),
+        repoId,
+        options?.parentWorktreeId,
+        executionHostId
+      )
       let warnedParentDropped = false
       const warnParentDroppedOnce = (): void => {
         if (warnedParentDropped) {
@@ -172,15 +180,14 @@ export function createCreateWorktree(
       }
       // Why: manual sort is user-authored order; stamp new workspaces at the top rather than relying on sortOrder fallback.
       const manualOrder = get().sortBy === 'manual' ? Date.now() : undefined
-      // Direct SSH still uses desktop IPC; paired runtimes use their captured environment.
-      const target = options?.executionHostId
-        ? (runtimeTargetForExecutionHostId(options.executionHostId) ?? { kind: 'local' as const })
-        : getActiveRuntimeTarget(settingsForRepoOwner(get(), repoId))
+      // Resolve the selected owner so SSH stays on desktop IPC and captured runtimes stay on their host.
+      const target = getActiveRuntimeTarget(
+        settingsForRepoOwner(get(), repoId, executionHostId, true)
+      )
       const creationHostId =
-        options?.executionHostId ??
-        (target.kind === 'environment'
+        target.kind === 'environment'
           ? toRuntimeExecutionHostId(target.environmentId)
-          : repoHostId(get(), repoId))
+          : executionHostId
       if (
         target.kind === 'environment' &&
         (options?.linkedWorkItem?.provider === 'jira' ||

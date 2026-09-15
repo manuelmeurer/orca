@@ -178,6 +178,7 @@ export function useFullCreationExecution(input: FullCreationExecutionInput) {
         submitCompareBaseRef,
         {
           linkedWorkItem: toFolderWorkspaceLinkedTask(submitLinkedWorkItem),
+          executionHostId: selectedRepoExecutionHostId ?? undefined,
           linkedTaskSourceContext: taskSourceContext,
           nameWasGenerated,
           ...(createDisplayName
