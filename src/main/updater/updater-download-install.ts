@@ -1,3 +1,5 @@
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../shared/custom-update-policy'
+import { app } from 'electron'
 import { beginMacUpdateDownload, deferMacQuitUntilInstallerReady } from '../updater-mac-install'
 import { recordUpdaterLifecycle } from '../updater-lifecycle-diagnostics'
 import { isExternallyManagedLinuxInstall } from '../linux-update-package-type'
@@ -8,6 +10,15 @@ import { UpdaterRemoteStatus } from './updater-remote-status'
 /** Coordinates renderer-facing download/install actions and their duplicate guards. */
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -38,6 +49,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   }
 
   protected downloadUpdate(): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
