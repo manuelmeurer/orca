@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../shared/custom-update-policy'
 import { app } from 'electron'
 import { fetchNudge, shouldApplyNudge } from '../updater-nudge'
 import { NUDGE_ACTIVATION_COOLDOWN_MS, NUDGE_POLL_INTERVAL_MS } from './updater-state'
@@ -5,7 +6,7 @@ import { UpdaterBuildSelection } from './updater-build-selection'
 
 export abstract class UpdaterNudge extends UpdaterBuildSelection {
   protected async checkForUpdateNudge(): Promise<void> {
-    if (!app.isPackaged) {
+    if (isCustomBuild(app.getVersion()) || !app.isPackaged) {
       return
     }
     if (this.nudgeCheckInFlight) {
@@ -47,6 +48,9 @@ export abstract class UpdaterNudge extends UpdaterBuildSelection {
   }
 
   protected scheduleUpdateNudgeCheck(): void {
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
     if (this.nudgeCheckTimer) {
       clearTimeout(this.nudgeCheckTimer)
     }

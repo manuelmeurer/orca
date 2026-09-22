@@ -1,3 +1,5 @@
+import { app } from 'electron'
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../shared/custom-update-policy'
 import {
   beginMacUpdateDownload,
   deferMacQuitUntilInstallerReady,
@@ -13,6 +15,15 @@ import { prepareThisProcessShipItStaging } from './shipit-leftover-recovery'
 
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -51,6 +62,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   }
 
   protected downloadUpdate(): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||

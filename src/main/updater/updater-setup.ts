@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../shared/custom-update-policy'
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../shared/release-channel'
@@ -149,7 +150,9 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
     }
     // Implicit quit install requires interactive mode and an explicit non-root/AppImage marker; serve requires handoff.
     autoUpdater.autoInstallOnAppQuit =
-      this.updateInstallMode === 'interactive' && getLinuxPackageType() === 'non-root'
+      !isCustomBuild(app.getVersion()) &&
+      this.updateInstallMode === 'interactive' &&
+      getLinuxPackageType() === 'non-root'
     // MacUpdater ignores quitAndInstall arguments; only the surviving CLI supervisor may relaunch serve.
     autoUpdater.autoRunAppAfterInstall = this.updateInstallMode === 'interactive'
     // Keep native updater diagnostics visible through local logging.
@@ -224,6 +227,10 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
         this.userInitiatedCheck = value
       }
     })
+
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
 
     void this.checkForUpdateNudge()
     this.scheduleUpdateNudgeCheck()

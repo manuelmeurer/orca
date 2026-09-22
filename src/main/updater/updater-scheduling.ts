@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../shared/custom-update-policy'
 import { app } from 'electron'
 import { isMacInstallRequested } from '../updater-mac-install'
 import { withUpdaterSpan } from '../observability/instrumentation'
@@ -14,6 +15,9 @@ export abstract class UpdaterScheduling extends UpdaterCheckFailure {
   }
 
   protected scheduleAutomaticUpdateCheck(delayMs: number): void {
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
     let effectiveDelayMs = delayMs
     // The retry constant identifies all retry-cadence callers, keeping backoff centralized.
     if (delayMs === AUTO_UPDATE_RETRY_INTERVAL_MS) {
@@ -45,6 +49,7 @@ export abstract class UpdaterScheduling extends UpdaterCheckFailure {
     nudgeId: string | null = this.getPersistedPendingUpdateNudgeId()
   ): boolean {
     if (
+      isCustomBuild(app.getVersion()) ||
       this.pendingQuitAndInstallTimer ||
       this.quitAndInstallInProgress ||
       isMacInstallRequested()

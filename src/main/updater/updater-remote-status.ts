@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../shared/custom-update-policy'
 import { app } from 'electron'
 import type { UpdateCheckOptions, UpdateStatus } from '../../shared/update-status-types'
 import type {
@@ -32,6 +33,7 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
     }
     const linuxPackageType = getLinuxPackageType()
     if (
+      isCustomBuild(app.getVersion()) ||
       this.updateInstallMode === 'unsupported-headless-serve' ||
       linuxPackageType === 'deb' ||
       linuxPackageType === 'rpm' ||
