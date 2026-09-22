@@ -666,11 +666,11 @@ describe('delete worktree flow', () => {
       // The waiver rides its own option; force stays whatever the original attempt used.
       expect(mocks.state.removeWorktree).toHaveBeenNthCalledWith(
         2,
-        { id: 'wt-1', executionHostId: null },
+        { id: 'wt-1', executionHostId: 'local' },
         false,
         { allowFailedArchiveHook: true }
       )
-      expect(onDeleted).toHaveBeenCalledWith([{ id: 'wt-1', executionHostId: null }])
+      expect(onDeleted).toHaveBeenCalledWith([{ id: 'wt-1', executionHostId: 'local' }])
     })
   })
 })
