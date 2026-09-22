@@ -35,3 +35,17 @@ it('describes the available action as a download', () => {
   expect(screen.getByText(/is available\. Click "Download Update" to download it\./)).toBeTruthy()
   expect(screen.queryByText(/download and install it/)).toBeNull()
 })
+
+it('shows custom install instructions instead of a download button', () => {
+  useAppStore.setState({
+    updateStatus: {
+      state: 'available',
+      version: '1.4.208',
+      changelog: null,
+      manualUpdateInstructions: 'Run bin/orca-custom install from the orca-custom repository.'
+    }
+  })
+  render(<GeneralUpdateSettingsSection />)
+  expect(screen.queryByRole('button', { name: /Download Update/ })).toBeNull()
+  expect(screen.getByText(/Run bin\/orca-custom install/)).toBeTruthy()
+})
