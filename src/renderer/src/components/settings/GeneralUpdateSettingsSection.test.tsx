@@ -72,3 +72,17 @@ it.each([undefined, false] as const)(
     expect(quitAndInstall).not.toHaveBeenCalled()
   }
 )
+
+it('shows custom install instructions instead of a download button', () => {
+  useAppStore.setState({
+    updateStatus: {
+      state: 'available',
+      version: '1.4.208',
+      changelog: null,
+      manualUpdateInstructions: 'Run bin/orca-custom install from the orca-custom repository.'
+    }
+  })
+  render(<GeneralUpdateSettingsSection />)
+  expect(screen.queryByRole('button', { name: /Download Update/ })).toBeNull()
+  expect(screen.getByText(/Run bin\/orca-custom install/)).toBeTruthy()
+})
