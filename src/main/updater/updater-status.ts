@@ -1,3 +1,5 @@
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../shared/custom-update-policy'
+import { app } from 'electron'
 import { loadElectronAutoUpdater, type ElectronAutoUpdater } from '../electron-updater-loader'
 import { statusesEqual } from '../updater-fallback'
 import type { UpdateCheckOptions, UpdateStatus } from '../../shared/update-status-types'
@@ -95,6 +97,9 @@ export abstract class UpdaterStatus extends BaseUpdaterState {
 
   /** `force` re-delivers a status the renderer must not miss even when it repeats the current one. */
   protected sendStatus(status: UpdateStatus, options?: { force?: boolean }): void {
+    if (isCustomBuild(app.getVersion())) {
+      status = { ...status, manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS }
+    }
     const pendingUserInitiatedCheckVariant = this.pendingUserInitiatedCheckAfterInFlight
     const shouldLaunchPendingUserInitiatedCheck =
       pendingUserInitiatedCheckVariant !== null &&

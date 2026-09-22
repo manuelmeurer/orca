@@ -92,7 +92,7 @@ export type UpdateStatus = (
       activeNudgeId?: string
       recovery?: LinuxPackageInstallRecovery
     }
-) & { source?: UpdateSource }
+) & { source?: UpdateSource; manualUpdateInstructions?: string }
 
 export type ReleaseBuildListResult =
   | { ok: true; channel: ReleaseChannel; builds: ReleaseBuild[] }
