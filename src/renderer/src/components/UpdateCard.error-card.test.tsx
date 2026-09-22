@@ -480,3 +480,52 @@ describe('UpdateCard recovery keyboard and motion', () => {
     expect(useAppStore.getState().updateCardCollapsed).toBe(false)
   })
 })
+
+it('offers only manual instructions for a custom build update', () => {
+  renderWithInitialStatus({
+    state: 'available',
+    version: '1.4.208',
+    changelog: null,
+    manualUpdateInstructions: 'Run bin/orca-custom install from the orca-custom repository.'
+  })
+  expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
+  expect(screen.getByText(/Run bin\/orca-custom install/)).toBeTruthy()
+})
+
+it('hides the rich update action for custom builds', () => {
+  useAppStore.setState({
+    updateStatus: {
+      state: 'available',
+      version: '1.4.208',
+      changelog: null,
+      manualUpdateInstructions: 'Run bin/orca-custom install.'
+    },
+    updateChangelog: {
+      release: {
+        title: 'New release',
+        description: 'Release details',
+        releaseNotesUrl: 'https://example.com/release'
+      },
+      releasesBehind: 1
+    },
+    dismissedUpdateVersion: null,
+    updateCardCollapsed: false,
+    updateReassuranceSeen: false
+  })
+  render(<UpdateCard />)
+  expect(screen.getByText('New: New release')).toBeTruthy()
+  expect(screen.getByText('Run bin/orca-custom install.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
+  expect(screen.queryByText(/Your terminal sessions won't be interrupted/)).toBeNull()
+})
+
+it('does not offer restart for a custom build with a downloaded status', () => {
+  renderWithInitialStatus({
+    state: 'downloaded',
+    version: '1.4.208',
+    manualUpdateInstructions: 'Run bin/orca-custom install.'
+  })
+  expect(screen.getByText('Run bin/orca-custom install.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /Restart|Install|^Update$/ })).toBeNull()
+  expect(quitAndInstall).not.toHaveBeenCalled()
+})
