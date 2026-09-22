@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../../shared/custom-update-policy'
 import {
   beginMacUpdateDownload,
   deferMacQuitUntilInstallerReady,
@@ -17,6 +18,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   private macStagingTimer: ReturnType<typeof setTimeout> | null = null
 
   protected quitAndInstall(automatic = false): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -138,6 +148,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   }
 
   protected downloadUpdate(automatic = false): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
