@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../../../shared/custom-update-policy'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Download, Loader2, RefreshCw } from 'lucide-react'
@@ -112,7 +113,9 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
             )}
           </Button>
 
-          {updateStatus.state === 'available' && !updateStatus.externallyManaged ? (
+          {updateStatus.state === 'available' &&
+          !updateStatus.manualUpdateInstructions &&
+          !updateStatus.externallyManaged ? (
             <Button
               variant="default"
               size="sm"
@@ -139,13 +142,14 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
               {updateStatus.version})
             </Button>
           ) : updateStatus.state === 'error' &&
+            !updateStatus.manualUpdateInstructions &&
             updateStatus.retryAction === 'install' &&
             updateStatus.retryable !== false ? (
             <Button variant="default" size="sm" onClick={handleRestartToUpdate} className="gap-2">
               <RefreshCw className="size-3.5" />
               {translate('auto.components.UpdateCard.2c2d3e03ca', 'Try Again')}
             </Button>
-          ) : updateStatus.state === 'downloaded' ? (
+          ) : updateStatus.state === 'downloaded' && !updateStatus.manualUpdateInstructions ? (
             <Button variant="default" size="sm" onClick={handleRestartToUpdate} className="gap-2">
               <Download className="size-3.5" />
               {translate(
@@ -159,10 +163,12 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
 
         <p className="text-xs text-muted-foreground">
           {updateStatus.state === 'idle' &&
-            translate(
-              'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
-              'Updates are checked automatically on launch.'
-            )}
+            (isCustomBuild(appVersion ?? '')
+              ? 'Automatic update checks are disabled for custom builds.'
+              : translate(
+                  'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
+                  'Updates are checked automatically on launch.'
+                ))}
           {updateStatus.state === 'checking' &&
             translate(
               'auto.components.settings.GeneralUpdateSettingsSection.31fd7150cf',
@@ -175,15 +181,17 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
                 'Version'
               )}{' '}
               {updateStatus.version}{' '}
-              {updateStatus.externallyManaged
-                ? translate(
-                    'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
-                    'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
-                  )
-                : translate(
-                    'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
-                    'is available. Click "Download Update" to download it.'
-                  )}{' '}
+              {updateStatus.manualUpdateInstructions
+                ? `is available. ${updateStatus.manualUpdateInstructions}`
+                : updateStatus.externallyManaged
+                  ? translate(
+                      'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
+                      'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
+                    )
+                  : translate(
+                      'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
+                      'is available. Click "Download Update" to download it.'
+                    )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
                   href={
@@ -212,7 +220,10 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
               'Downloading v{{value0}}... {{value1}}%',
               { value0: updateStatus.version, value1: updateStatus.percent }
             )}
-          {updateStatus.state === 'downloaded' && (
+          {updateStatus.state === 'downloaded' &&
+            updateStatus.manualUpdateInstructions &&
+            updateStatus.manualUpdateInstructions}
+          {updateStatus.state === 'downloaded' && !updateStatus.manualUpdateInstructions && (
             <>
               {translate(
                 'auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc',
@@ -256,7 +267,9 @@ export function GeneralUpdateSettingsSection(): React.JSX.Element {
                   ))}
         </p>
       </SearchableSetting>
-      {channelSwitcherRevealed ? <ReleaseChannelSection /> : null}
+      {channelSwitcherRevealed && !isCustomBuild(appVersion ?? '') ? (
+        <ReleaseChannelSection />
+      ) : null}
       <GeneralRemoteServerUpdates />
     </section>
   )
