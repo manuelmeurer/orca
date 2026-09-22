@@ -58,6 +58,7 @@ describe('showDeleteWorktreeFailureToast', () => {
         worktreeName: 'Child',
         identityKey,
         showViewChanges: false,
+        onDeleteAnyway: vi.fn(),
         onViewChanges: vi.fn(),
         onForceDelete: vi.fn()
       })

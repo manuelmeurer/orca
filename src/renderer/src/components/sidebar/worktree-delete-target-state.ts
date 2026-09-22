@@ -38,6 +38,8 @@ export function showBlockedWorktreeDelete(
     identityKey: key,
     worktreeName: target.displayName,
     showViewChanges: false,
+    canWaiveArchiveHook: false,
+    onDeleteAnyway: () => {},
     onViewChanges: () => {},
     onForceDelete: () => {}
   })
