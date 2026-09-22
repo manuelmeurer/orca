@@ -22,6 +22,7 @@ import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
 import { formatUpdateDelayDate } from './update-delay-copy'
 import { useNow } from '@/lib/window-activity/use-now'
 import { isDelayedUpdatePending } from '../../../../../shared/updater/update-delay'
+import { isCustomBuild } from '../../../../../shared/custom-update-policy'
 import { getReleaseNotesUrlForVersion } from '../../../../../shared/updater/release-channel'
 import { openAppHttpLinkFromAnchor } from '@/lib/browser/navigation/app-http-link-open'
 
@@ -124,7 +125,9 @@ export function GeneralUpdateSettingsSection({
             )}
           </Button>
 
-          {updateStatus.state === 'available' && !updateStatus.externallyManaged ? (
+          {updateStatus.state === 'available' &&
+          !updateStatus.manualUpdateInstructions &&
+          !updateStatus.externallyManaged ? (
             <Button
               variant="default"
               size="sm"
@@ -151,6 +154,7 @@ export function GeneralUpdateSettingsSection({
               {updateStatus.version})
             </Button>
           ) : updateStatus.state === 'error' &&
+            !updateStatus.manualUpdateInstructions &&
             updateStatus.retryAction === 'install' &&
             updateStatus.retryable !== false ? (
             <Button variant="default" size="sm" onClick={handleRestartToUpdate} className="gap-2">
@@ -158,6 +162,7 @@ export function GeneralUpdateSettingsSection({
               {t('auto.components.UpdateCard.b3b02a9d84', 'Try again')}
             </Button>
           ) : updateStatus.state === 'downloaded' &&
+            !updateStatus.manualUpdateInstructions &&
             !(updateStatus.automaticDownload && updateStatus.installing) ? (
             <Button
               variant="default"
@@ -178,10 +183,12 @@ export function GeneralUpdateSettingsSection({
 
         <p className="text-xs text-muted-foreground">
           {updateStatus.state === 'idle' &&
-            t(
-              'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
-              'Updates are checked automatically on launch.'
-            )}
+            (isCustomBuild(appVersion ?? '')
+              ? 'Automatic update checks are disabled for custom builds.'
+              : t(
+                  'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
+                  'Updates are checked automatically on launch.'
+                ))}
           {updateStatus.state === 'checking' &&
             t(
               'auto.components.settings.GeneralUpdateSettingsSection.31fd7150cf',
@@ -191,7 +198,9 @@ export function GeneralUpdateSettingsSection({
             <>
               {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
               {updateStatus.version}{' '}
-              {updateStatus.externallyManaged
+              {updateStatus.manualUpdateInstructions
+                ? `is available. ${updateStatus.manualUpdateInstructions}`
+                : updateStatus.externallyManaged
                 ? t(
                     'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
                     'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
@@ -254,7 +263,10 @@ export function GeneralUpdateSettingsSection({
               'Downloading v{{value0}}... {{value1}}%',
               { value0: updateStatus.version, value1: updateStatus.percent }
             )}
-          {updateStatus.state === 'downloaded' && (
+          {updateStatus.state === 'downloaded' &&
+            updateStatus.manualUpdateInstructions &&
+            updateStatus.manualUpdateInstructions}
+          {updateStatus.state === 'downloaded' && !updateStatus.manualUpdateInstructions && (
             <>
               {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
               {updateStatus.version}{' '}
@@ -305,7 +317,9 @@ export function GeneralUpdateSettingsSection({
       </SearchableSetting>
       {isWebClientLocation() ? null : <AutomaticUpdatesSetting />}
       <UpdateDelaySetting />
-      {channelSwitcherRevealed ? <ReleaseChannelSection /> : null}
+      {channelSwitcherRevealed && !isCustomBuild(appVersion ?? '') ? (
+        <ReleaseChannelSection />
+      ) : null}
       <GeneralRemoteServerUpdates />
       {children}
     </SettingsGroup>
