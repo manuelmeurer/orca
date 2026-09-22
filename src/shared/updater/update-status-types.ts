@@ -161,6 +161,7 @@ export type UpdateStatus = (
   requiredByOrca?: boolean
   /** macOS desktop has staged this version for installation on a normal quit. */
   installOnQuit?: true
+  manualUpdateInstructions?: string
 }
 
 export type ReleaseBuildListResult =

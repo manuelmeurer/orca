@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../../shared/custom-update-policy'
 import {
   beginMacUpdateDownload,
   deferMacQuitUntilInstallerReady,
@@ -25,6 +26,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     trigger: UpdateInstallTrigger = 'manual',
     isCurrentTeamRestart?: () => boolean
   ): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -181,6 +191,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
   }
 
   protected downloadUpdate(automatic = false): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||

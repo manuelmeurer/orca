@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../../shared/custom-update-policy'
 import { app, powerMonitor, type BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../../shared/updater/release-channel'
 import type { ReleaseBuildListOptions } from '../releases/updater-release-build-cache'
@@ -183,7 +184,9 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
     }
     // Implicit quit install requires interactive mode and an explicit non-root/AppImage marker; serve requires handoff.
     this.implicitInstallOnQuit =
-      this.updateInstallMode === 'interactive' && getLinuxPackageType() === 'non-root'
+      !isCustomBuild(app.getVersion()) &&
+      this.updateInstallMode === 'interactive' &&
+      getLinuxPackageType() === 'non-root'
     autoUpdater.autoInstallOnAppQuit = false
     this.applyTeamPolicyBeforeQuit()
     // MacUpdater ignores quitAndInstall arguments; only the surviving CLI supervisor may relaunch serve.
@@ -297,6 +300,10 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
         this.userInitiatedCheck = value
       }
     })
+
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
 
     void this.checkForUpdateNudge()
     this.scheduleUpdateNudgeCheck()
