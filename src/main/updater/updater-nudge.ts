@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../shared/custom-update-policy'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { fetchNudge, shouldApplyNudge } from '../updater-nudge'
@@ -7,7 +8,7 @@ import { UpdaterBuildSelection } from './updater-build-selection'
 /** Polls update campaigns and exposes their dismissal actions. */
 export abstract class UpdaterNudge extends UpdaterBuildSelection {
   protected async checkForUpdateNudge(): Promise<void> {
-    if (!app.isPackaged || is.dev) {
+    if (isCustomBuild(app.getVersion()) || !app.isPackaged || is.dev) {
       return
     }
     if (this.nudgeCheckInFlight) {
@@ -49,6 +50,9 @@ export abstract class UpdaterNudge extends UpdaterBuildSelection {
   }
 
   protected scheduleUpdateNudgeCheck(): void {
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
     if (this.nudgeCheckTimer) {
       clearTimeout(this.nudgeCheckTimer)
     }
