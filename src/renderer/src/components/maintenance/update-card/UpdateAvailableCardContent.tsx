@@ -31,6 +31,7 @@ export function UpdateAvailableRichContent({
   onMediaLoad,
   onUpdate,
   onClose,
+  manualUpdateInstructions,
   externallyManaged = false
 }: {
   release: NonNullable<ChangelogData['release']>
@@ -42,6 +43,7 @@ export function UpdateAvailableRichContent({
   onMediaLoad: () => void
   onUpdate: () => void
   onClose: () => void
+  manualUpdateInstructions?: string
   externallyManaged?: boolean
 }): React.JSX.Element {
   const t = useTranslate()
@@ -107,7 +109,9 @@ export function UpdateAvailableRichContent({
       >
         {t('auto.components.UpdateCard.aad383aecc', 'Read the full release notes')}
       </button>
-      {externallyManaged ? (
+      {manualUpdateInstructions ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{manualUpdateInstructions}</p>
+      ) : externallyManaged ? (
         <ExternallyManagedNote />
       ) : (
         <Button variant="default" size="sm" onClick={onUpdate} className="w-full cursor-pointer">
@@ -123,12 +127,14 @@ export function UpdateAvailableSimpleContent({
   releaseUrl,
   onUpdate,
   onClose,
+  manualUpdateInstructions,
   externallyManaged = false
 }: {
   version: string
   releaseUrl?: string
   onUpdate: () => void
   onClose: () => void
+  manualUpdateInstructions?: string
   externallyManaged?: boolean
 }): React.JSX.Element {
   const t = useTranslate()
@@ -153,7 +159,9 @@ export function UpdateAvailableSimpleContent({
           value0: version
         })}
       </p>
-      {externallyManaged ? (
+      {manualUpdateInstructions ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{manualUpdateInstructions}</p>
+      ) : externallyManaged ? (
         <ExternallyManagedNote />
       ) : (
         <p className="text-xs leading-relaxed text-muted-foreground">
@@ -169,7 +177,7 @@ export function UpdateAvailableSimpleContent({
           {t('auto.components.UpdateCard.44324ef542', 'Release notes')}
         </button>
       )}
-      {!externallyManaged && (
+      {!manualUpdateInstructions && !externallyManaged && (
         <Button
           variant="default"
           size="sm"
