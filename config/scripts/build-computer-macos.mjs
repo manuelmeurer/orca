@@ -28,9 +28,21 @@ chmodSync(binaryPath, 0o755)
 createHelperApp()
 
 function buildUniversalBinary() {
-  const builtBinaries = universalTriples.map((triple) => {
-    run('swift', ['build', '-c', 'release', '--package-path', packagePath, '--triple', triple])
-    return path.join(packagePath, '.build', triple, 'release', 'orca-computer-use-macos')
+  const builtBinaries = universalTriples.map(triple => {
+    // Swift Build shares its output path across triples; isolate each architecture.
+    const args = [
+      'build', '-c', 'release', '--package-path', packagePath,
+      '--scratch-path', path.join(packagePath, '.build', 'architectures', triple),
+      '--triple', triple
+    ]
+    run('swift', args)
+    const outputDirectory = run('swift', [...args, '--show-bin-path'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'inherit']
+    }).trim()
+    const builtBinary = path.join(outputDirectory, 'orca-computer-use-macos')
+    run('lipo', [builtBinary, '-verify_arch', triple.split('-')[0]])
+    return builtBinary
   })
   mkdirSync(path.dirname(binaryPath), { recursive: true })
   run('lipo', ['-create', ...builtBinaries, '-output', binaryPath])
@@ -83,14 +95,15 @@ function resolveSigningIdentity() {
   return releaseMatch?.[1] ?? developmentMatch?.[1] ?? '-'
 }
 
-function run(command, args) {
-  const result = spawnSync(command, args, { stdio: 'inherit' })
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, { stdio: 'inherit', ...options })
   if (result.signal) {
     process.kill(process.pid, result.signal)
   }
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
   }
+  return result.stdout
 }
 
 function infoPlist() {
