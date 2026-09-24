@@ -16,6 +16,9 @@ import type { AgentLaunchTabViewerRule } from '../../../../shared/agent-launch/c
 import type { SpawnIntent } from '../../../../shared/host-spawn-admission'
 
 export type TerminalCreateOptions = {
+  position?: 'first'
+  /** Internal: placement requires creation in the authoritative renderer. */
+  rendererBacked?: boolean
   command?: string
   /** Spawn Windows shell as the PTY process; selecting it through command creates only a child and later returns to the unwanted default shell. */
   shellOverride?: string

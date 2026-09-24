@@ -1,6 +1,4 @@
 import type { TerminalLaunchResult } from './agent-session/lifecycle/agent-session-resume'
-import type * as AgentSessionResume from './agent-session/lifecycle/agent-session-resume'
-import type { StartupCommandDelivery } from './agent-launch/startup/codex-startup-delivery'
 import type { ExecutionHostId } from './execution-host'
 import type { PtyIncarnationId } from './terminal/pty/lifecycle/pty-incarnation'
 import type { PtyLivenessVerdict } from './terminal/pty/lifecycle/pty-liveness-verdict'
@@ -10,7 +8,6 @@ import type { TabGroupLayoutNode } from './tab-types'
 import type { TerminalExitCause } from './terminal/pty/lifecycle/terminal-exit-cause'
 import type { TerminalPaneLayoutNode } from './workspace-layout/terminal-tab-types'
 import type { TerminalAgent } from './agent-status/identity/terminal-agent'
-import type { TuiAgent } from './agent-launch/catalog/tui-agent'
 export type {
   RuntimeTerminalSend,
   RuntimeTerminalPromptStage,
@@ -239,35 +236,7 @@ export type RuntimeTerminalAgentStatus = {
 
 export type RuntimeTerminalPresentation = 'background' | 'focused'
 
-type RuntimeTerminalCreateBaseRequestPayload = {
-  requestId: string
-  worktreeId?: string
-  afterTabId?: string
-  targetGroupId?: string
-  command?: string
-  cwd?: string
-  env?: Record<string, string>
-  envToDelete?: string[]
-  launchConfig?: AgentSessionResume.SleepingAgentLaunchConfig
-  resumeProviderSession?: AgentSessionResume.AgentProviderSessionMetadata
-  launchToken?: string
-  launchAgent?: TuiAgent
-  viewMode?: 'terminal' | 'chat'
-  startupCommandDelivery?: StartupCommandDelivery
-  title?: string
-  activate?: boolean
-  presentation?: RuntimeTerminalPresentation
-  surfaceOwner?: false
-  /** Windows shell the created tab spawns AS, instead of the host default. */
-  shellOverride?: string
-}
-
-export type RuntimeTerminalCreateRequestPayload =
-  | (RuntimeTerminalCreateBaseRequestPayload & { source?: undefined })
-  | (RuntimeTerminalCreateBaseRequestPayload & {
-      worktreeId: string
-      source: 'runtime-session'
-    })
+export type { RuntimeTerminalCreateRequestPayload } from './runtime-terminal-create-request'
 
 export type { RuntimeTerminalCreate } from './runtime-terminal-create-contract'
 

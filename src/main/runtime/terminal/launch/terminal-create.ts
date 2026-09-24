@@ -26,6 +26,7 @@ import { mergeTerminalEnvDeletionKeys } from './runtime-agent-launch-resolution'
 import { terminalSpawnOptions } from './terminal-spawn-options'
 import { createDesktopTerminal } from './orca-runtime-create-terminal-desktop'
 import { terminalCreateTeamAllocation } from './terminal-create-team-allocation'
+import { resolveTerminalCreateSurface } from '../../terminal-create-surface'
 import { createIdempotentCallback } from '../../orca-runtime-report-pty-spawn-commit'
 import {
   recordPtySurface,
@@ -54,6 +55,23 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
       opts.terminalViewAttributes
     )
     const presentation = resolveTerminalPresentation(opts)
+    if (opts.position === 'first') {
+      const surface = resolveTerminalCreateSurface(
+        selector,
+        opts,
+        this.getAvailableAuthoritativeWindow()
+      )
+      opts = surface.options
+      opts.onPtySpawnDispatched?.()
+      return createDesktopTerminal(
+        this,
+        selector,
+        opts,
+        presentation,
+        surface.window,
+        ...evidence
+      )
+    }
     // Why: this process starts every terminal it can place, so a slow window only delays showing
     // it; a window-made create that timed out here still ran later, and a retry duplicated it.
     if (selector !== undefined) {
@@ -306,6 +324,6 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
     }
     // The renderer owns this spawn, so this process cannot see when it is requested.
     opts.onPtySpawnDispatched?.()
-    return createDesktopTerminal(this, opts, presentation)
+    return createDesktopTerminal(this, undefined, opts, presentation, null, ...evidence)
   }
 }
