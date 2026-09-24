@@ -3,7 +3,10 @@ import { getConnectionIdFromState } from '@/lib/connection-context'
 import { initialAgentTabViewModeProps } from '@/lib/native-chat-initial-view-mode'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { resolveTerminalWorktreeRoute } from '@/lib/terminal-worktree-route'
-import { insertUnifiedTabAfterAnchor } from '@/lib/unified-tab-anchor-insertion'
+import {
+  insertUnifiedTabAfterAnchor,
+  insertUnifiedTabFirst
+} from '@/lib/unified-tab-anchor-insertion'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '../../store'
 import {
@@ -83,12 +86,19 @@ export function registerTerminalRequestIpcBridge(unsubs: (() => void)[]): void {
           // Why: renderer-backed Codex startup must mount its new TerminalPane without switching UI or connecting every saved tab.
           requestBackgroundTerminalWorktreeMount({ worktreeId, tabIds: [tab.id] })
         }
-        if (data.afterTabId) {
+        if (data.afterTabId || data.position === 'first') {
           const createdUnifiedTabId = useAppStore
             .getState()
             .unifiedTabsByWorktree[worktreeId]?.find((item) => item.entityId === tab.id)?.id
+          if (data.position === 'first' && !createdUnifiedTabId) {
+            throw new Error('Cannot position terminal: its unified tab is unavailable')
+          }
           if (createdUnifiedTabId) {
-            insertUnifiedTabAfterAnchor(worktreeId, createdUnifiedTabId, data.afterTabId)
+            if (data.position === 'first') {
+              insertUnifiedTabFirst(worktreeId, createdUnifiedTabId)
+            } else if (data.afterTabId) {
+              insertUnifiedTabAfterAnchor(worktreeId, createdUnifiedTabId, data.afterTabId)
+            }
           }
         }
         if (shouldActivate) {
