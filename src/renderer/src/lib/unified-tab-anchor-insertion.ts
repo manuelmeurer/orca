@@ -1,7 +1,22 @@
 import { useAppStore } from '../store'
-import { insertTabIdIntoOrder } from '../store/slices/tabs/tabs-tab-order'
+import {
+  insertTabIdAtStartOfOrder,
+  insertTabIdIntoOrder
+} from '../store/slices/tabs/tabs-tab-order'
 
-/** Move `tabId` to sit immediately after `anchorTabId`; no-op unless both share a live group. */
+export function insertUnifiedTabFirst(worktreeId: string, tabId: string): void {
+  const state = useAppStore.getState()
+  const group = (state.groupsByWorktree[worktreeId] ?? []).find((candidate) =>
+    candidate.tabOrder.includes(tabId)
+  )
+  if (!group) {
+    throw new Error('Cannot position terminal: its tab group is unavailable')
+  }
+  const order = insertTabIdAtStartOfOrder(group.tabOrder, tabId)
+  state.reorderUnifiedTabs(group.id, order, { recordInteraction: false })
+}
+
+/** Move `tabId` to sit immediately after `anchorTabId`; no-op unless both share a group. */
 export function insertUnifiedTabAfterAnchor(
   worktreeId: string,
   tabId: string,

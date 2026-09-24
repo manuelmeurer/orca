@@ -33,6 +33,7 @@ export type RequestTerminalCreateListenerPayload = {
   requestId: string
   worktreeId?: string
   afterTabId?: string
+  position?: 'first'
   targetGroupId?: string
   command?: string
   cwd?: string
