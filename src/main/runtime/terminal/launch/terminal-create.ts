@@ -3,6 +3,7 @@ import type { PaneSpawnOperation } from '../../../ipc/pty/pane/pane-spawn-operat
 import { OrcaRuntimeWithTerminalCreateDeduplication } from './terminal-create-deduplication'
 import * as dependencies from '../../orca-runtime-create-terminal-dependencies'
 import { createDesktopTerminal } from '../../orca-runtime-create-terminal-desktop'
+import { resolveTerminalCreateSurface } from '../../terminal-create-surface'
 import { buildRuntimeAgentTeamsLaunchPlan } from './agent-teams-launch-plan'
 import { createIdempotentCallback } from '../../orca-runtime-report-pty-spawn-commit'
 import { recordPtySurface, spawnSurfaceClaimSequence } from '../../pty-recorded-surface-topology'
@@ -28,6 +29,23 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
       dependencies.setPairedViewerColors(callerColors)
     }
     const presentation = dependencies.resolveTerminalPresentation(opts)
+    if (opts.position === 'first') {
+      const surface = resolveTerminalCreateSurface(
+        worktreeSelector,
+        opts,
+        this.getAvailableAuthoritativeWindow()
+      )
+      opts = surface.options
+      opts.onPtySpawnDispatched?.()
+      return createDesktopTerminal(
+        this,
+        worktreeSelector,
+        opts,
+        presentation,
+        surface.window,
+        created
+      )
+    }
     // Why: this process starts every terminal it can place, so a slow window only delays showing
     // it; a window-made create that timed out here still ran later, and a retry duplicated it.
     if (worktreeSelector !== undefined) {
@@ -308,6 +326,6 @@ export abstract class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTermi
     }
     // The renderer owns this spawn, so this process cannot see when it is requested.
     opts.onPtySpawnDispatched?.()
-    return createDesktopTerminal(this, opts, presentation)
+    return createDesktopTerminal(this, undefined, opts, presentation, null, created)
   }
 }

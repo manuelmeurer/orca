@@ -29,6 +29,9 @@ import type { RuntimeAgentRowSnapshot } from './runtime-worktree-agent-rows'
 import type { WorkerTerminalHostScope } from '../../shared/worker-terminal-host-scope'
 
 export type TerminalCreateOptions = {
+  position?: 'first'
+  /** Internal: prefer creation in the authoritative renderer when placement requires it. */
+  rendererBacked?: boolean
   command?: string
   /**
    * Windows shell to spawn AS the PTY process, instead of the host default shell.
