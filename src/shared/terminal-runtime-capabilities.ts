@@ -21,6 +21,8 @@ export const TERMINAL_SPAWN_INTENT_RUNTIME_CAPABILITY = 'terminal.spawn-intent.v
 // Why: older hosts cannot reconcile terminal.create's mutation after losing the reply, so clients may only retry unknown outcomes when advertised.
 export const TERMINAL_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY =
   'terminal.create-idempotency.v2' as const
+// Older hosts strip placement, so callers must negotiate before creating.
+export const TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY = 'terminal.create-position.v1' as const
 // Why: an older host strips terminal.create's unknown `shell` and answers with a terminal running
 // the host default shell. That reply is indistinguishable from success, so a client asking for a
 // shell must refuse rather than create the wrong one.
@@ -42,6 +44,7 @@ export const TERMINAL_RUNTIME_CAPABILITIES = [
   TERMINAL_SPAWN_INTENT_RUNTIME_CAPABILITY,
   ...TERMINAL_QUICK_COMMAND_RUNTIME_CAPABILITIES,
   TERMINAL_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY,
+  TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY,
   TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY,
   TERMINAL_SPLIT_RETRY_RUNTIME_CAPABILITY
 ] as const

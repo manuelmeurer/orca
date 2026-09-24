@@ -89,6 +89,7 @@ export const TERMINAL_LIFECYCLE_METHODS = [
             // A CLI command (typed or an agent's) or a window's create is the user's act.
             wslUserAct: true,
             command: params.command,
+            ...(params.position ? { position: params.position } : {}),
             terminalImageViewerSupported: terminalImageViewerSupported(context),
             ...(params.shell ? { shellOverride: params.shell } : {}),
             startupCommandDelivery: params.startupCommandDelivery,
