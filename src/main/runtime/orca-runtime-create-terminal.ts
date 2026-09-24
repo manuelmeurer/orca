@@ -1,6 +1,7 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
 import { OrcaRuntimeWithTerminalCreateDeduplication } from './orca-runtime-terminal-create-deduplication'
 import * as dependencies from './orca-runtime-create-terminal-dependencies'
+import { resolveTerminalCreateSurface } from './terminal-create-surface'
 import { createDesktopTerminal } from './orca-runtime-create-terminal-desktop'
 import { buildRuntimeAgentTeamsLaunchPlan } from './orca-runtime-agent-teams-launch-plan'
 import { createPtySpawnCommitReporter } from './orca-runtime-report-pty-spawn-commit'
@@ -15,15 +16,13 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
       throw new Error(`startupAgent ${opts.startupAgent} requires a workspace selector.`)
     }
     const presentation = dependencies.resolveTerminalPresentation(opts)
-    const requiresRendererFocus = opts.presentation === 'focused' || opts.focus === true
-    const availableAuthoritativeWindow = this.getAvailableAuthoritativeWindow()
-    const rendererWindow = opts.rendererBacked === true ? availableAuthoritativeWindow : null
-    const shouldCreateInBackground =
-      worktreeSelector !== undefined &&
-      (Boolean(opts.agentSessionClaim) ||
-        (!requiresRendererFocus && opts.rendererBacked !== true) ||
-        availableAuthoritativeWindow === null)
-    if (shouldCreateInBackground) {
+    const surface = resolveTerminalCreateSurface(
+      worktreeSelector,
+      opts,
+      this.getAvailableAuthoritativeWindow()
+    )
+    opts = surface.options
+    if (surface.background) {
       if (!this.ptyController?.spawn) {
         throw new Error('runtime_unavailable')
       }
@@ -297,6 +296,6 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
         releaseStablePaneCreate()
       }
     }
-    return createDesktopTerminal(this, worktreeSelector, opts, presentation, rendererWindow)
+    return createDesktopTerminal(this, worktreeSelector, opts, presentation, surface.window)
   }
 }

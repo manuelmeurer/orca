@@ -131,6 +131,8 @@ export const ACCOUNT_IMPORT_RUNTIME_CAPABILITY = 'accounts.import-host-credentia
 // Why: older hosts cannot reconcile terminal.create's mutation after losing the reply, so clients may only retry unknown outcomes when advertised.
 export const TERMINAL_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY =
   'terminal.create-idempotency.v2' as const
+// Older hosts strip placement, so callers must negotiate before creating.
+export const TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY = 'terminal.create-position.v1' as const
 // Why: an older host strips terminal.create's unknown `shell` and answers with a terminal running
 // the host default shell. That reply is indistinguishable from success, so a client asking for a
 // shell must refuse rather than create the wrong one.
@@ -345,6 +347,7 @@ export const RUNTIME_CAPABILITIES = [
   WORKTREE_ARCHIVE_FAILURE_BLOCKING_RUNTIME_CAPABILITY,
   TERMINAL_CREATE_IDEMPOTENCY_RUNTIME_CAPABILITY,
   TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY,
+  TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY,
   SESSION_TAB_CLOSE_INTENT_RUNTIME_CAPABILITY,
   SESSION_TABS_AUTHORITATIVE_INVENTORY_RUNTIME_CAPABILITY,
   SESSION_TABS_SPLIT_GROUP_PLACEMENT_RUNTIME_CAPABILITY,

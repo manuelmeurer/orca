@@ -21,6 +21,7 @@ import type { RuntimeAgentRowSnapshot } from './runtime-worktree-agent-rows'
 import type { WorkerTerminalHostScope } from './orchestration/worker-terminal-process-liveness'
 
 export type TerminalCreateOptions = {
+  position?: 'first'
   command?: string
   /**
    * Windows shell to spawn AS the PTY process, instead of the host default shell.
