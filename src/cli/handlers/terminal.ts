@@ -39,6 +39,7 @@ import {
   listSupportedWindowsShellOverrides
 } from '../../shared/windows-terminal-shell'
 import {
+  TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY,
   TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY,
   TERMINAL_SPLIT_RETRY_RUNTIME_CAPABILITY
 } from '../../shared/protocol-version'
@@ -167,6 +168,27 @@ export const TERMINAL_HANDLERS: Record<string, CommandHandler> = {
         'Remote terminal create requires --worktree because the client cwd cannot identify a server worktree.'
       )
     }
+    const position = getOptionalStringFlag(flags, 'position')
+    if (flags.has('position') && position !== 'first') {
+      throw new RuntimeClientError('invalid_argument', '--position must be first')
+    }
+    if (position) {
+      const status = await client.getCliStatus()
+      if (!status.result.runtime.reachable) {
+        throw new RuntimeClientError(
+          'runtime_unavailable',
+          'Cannot verify --position support; no terminal was created.'
+        )
+      }
+      if (
+        !status.result.runtime.capabilities?.includes(TERMINAL_CREATE_POSITION_RUNTIME_CAPABILITY)
+      ) {
+        throw new RuntimeClientError(
+          'incompatible_runtime',
+          'This Orca host does not support --position; update it before creating the terminal.'
+        )
+      }
+    }
     const command = getOptionalStringFlag(flags, 'command')
     const useRendererBackedInteractiveTerminal =
       !client.isRemote && shouldUseRendererBackedInteractiveTerminal(command)
@@ -203,6 +225,7 @@ export const TERMINAL_HANDLERS: Record<string, CommandHandler> = {
       worktree: await getBrowserWorktreeSelector(flags, cwd, client),
       command,
       ...(shell !== undefined ? { shell } : {}),
+      ...(position ? { position } : {}),
       title: getOptionalStringFlag(flags, 'title'),
       focus,
       ...(focus ? { presentation: 'focused' } : {}),
