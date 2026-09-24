@@ -72,6 +72,7 @@ export async function createDesktopTerminal(
       startupCommandDelivery: launchOpts.startupCommandDelivery,
       ...(launchOpts.shellOverride ? { shellOverride: launchOpts.shellOverride } : {}),
       title: launchOpts.title,
+      ...(launchOpts.position ? { position: launchOpts.position } : {}),
       activate: presentation === 'focused',
       ...(presentation ? { presentation } : {}),
       ...dependencies.ownerSurfacing(opts.surfaceOwner !== false)
