@@ -145,6 +145,7 @@ export const TerminalWait = TerminalHandle.extend({
 })
 
 export const TerminalCreateParams = z.object({
+  position: z.literal('first').optional(),
   worktree: OptionalString,
   clientMutationId: z.string().min(1).max(128).optional(),
   reconcileExisting: z.boolean().optional(),
