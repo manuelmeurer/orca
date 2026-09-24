@@ -21,6 +21,13 @@ export function applyTabOrderSortValues(tabs: Tab[], tabOrder: string[]): Tab[] 
   })
 }
 
+export function insertTabIdAtStartOfOrder(
+  tabOrder: readonly string[],
+  tabId: string
+): string[] {
+  return [tabId, ...dedupeTabOrder(tabOrder).filter((id) => id !== tabId)]
+}
+
 /**
  * Insert `tabId` after `anchorTabId` when both share a pin partition; otherwise at the end of the
  * new tab's partition. Siblings keep their relative order.
