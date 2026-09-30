@@ -2469,6 +2469,48 @@ html.native-shell .app-layout {
   opacity: 0.92;
 }
 
+/* Why: vs-dark's diff tints are strong olive greens and stack (line + char)
+   across fully added blocks, making green comments unreadable. Keep the tints
+   faint and mark changed lines with a GitHub-style bar. Monaco redeclares these
+   variables on nested .monaco-editor elements, so override both. Leave gutter
+   variables unset: gutter-delete paints the original-side margin of added blocks. */
+.monaco-diff-editor,
+.monaco-diff-editor .monaco-editor {
+  --vscode-diffEditor-insertedLineBackground: color-mix(
+    in srgb,
+    var(--git-decoration-added) 9%,
+    transparent
+  );
+  --vscode-diffEditor-insertedTextBackground: color-mix(
+    in srgb,
+    var(--git-decoration-added) 10%,
+    transparent
+  );
+  --vscode-diffEditor-removedLineBackground: color-mix(
+    in srgb,
+    var(--git-decoration-deleted) 10%,
+    transparent
+  );
+  --vscode-diffEditor-removedTextBackground: color-mix(
+    in srgb,
+    var(--git-decoration-deleted) 12%,
+    transparent
+  );
+}
+
+.monaco-diff-editor .line-insert {
+  box-shadow: inset 3px 0 0 var(--git-decoration-added);
+}
+
+.monaco-diff-editor .line-delete {
+  box-shadow: inset 3px 0 0 var(--git-decoration-deleted);
+}
+
+/* Why: inline deleted lines compete with the new code at full brightness. */
+.monaco-diff-editor .view-lines.line-delete .view-line {
+  opacity: 0.6;
+}
+
 /* Compact Monaco tooltip wrappers overlap find buttons, causing mouseleave/dispose/mouseover flicker.
    Disable hit-testing only on context-view chains containing compact hovers; preserve menus and interactive markdown. */
 .context-view:has(> .workbench-hover-container > .workbench-hover.compact),
