@@ -352,6 +352,7 @@ export default function DiffViewer({
       readOnly: !editable,
       originalEditable: false,
       renderSideBySide: sideBySide,
+      renderIndicators: false,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
       ...PLUGIN_SYNTAX_EDITOR_OPTIONS,
