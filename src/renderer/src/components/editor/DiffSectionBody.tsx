@@ -85,6 +85,7 @@ export function DiffSectionBody({
       readOnly: !isEditable,
       originalEditable: false,
       renderSideBySide: sideBySide,
+      renderIndicators: false,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
       ...PLUGIN_SYNTAX_EDITOR_OPTIONS,
