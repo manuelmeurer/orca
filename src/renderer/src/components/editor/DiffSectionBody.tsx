@@ -221,6 +221,8 @@ export function DiffSectionBody({
             readOnly: !isEditable,
             originalEditable: false,
             renderSideBySide: sideBySide,
+            // Why: main.css marks changed lines with a bar, so the +/- column is noise.
+            renderIndicators: false,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             fontSize: diffEditorFontSize,

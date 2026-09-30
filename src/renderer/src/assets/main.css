@@ -2364,6 +2364,49 @@ html.native-shell .app-layout {
   opacity: 0.92;
 }
 
+/* Why: vs-dark's diff tints are strong olive greens and stack (line + char)
+   across fully added blocks, so its green comments become unreadable. Use faint
+   tints and mark changed lines with a bar at the start of the code instead, GitHub-style. Monaco
+   declares these variables on every .monaco-editor, so the nested selector is
+   needed to win. Gutter variables are left alone: Monaco paints gutter-delete
+   across the original margin of added blocks. */
+.monaco-diff-editor,
+.monaco-diff-editor .monaco-editor {
+  --vscode-diffEditor-insertedLineBackground: color-mix(
+    in srgb,
+    var(--git-decoration-added) 9%,
+    transparent
+  );
+  --vscode-diffEditor-insertedTextBackground: color-mix(
+    in srgb,
+    var(--git-decoration-added) 10%,
+    transparent
+  );
+  --vscode-diffEditor-removedLineBackground: color-mix(
+    in srgb,
+    var(--git-decoration-deleted) 10%,
+    transparent
+  );
+  --vscode-diffEditor-removedTextBackground: color-mix(
+    in srgb,
+    var(--git-decoration-deleted) 12%,
+    transparent
+  );
+}
+
+.monaco-diff-editor .line-insert {
+  box-shadow: inset 3px 0 0 var(--git-decoration-added);
+}
+
+.monaco-diff-editor .line-delete {
+  box-shadow: inset 3px 0 0 var(--git-decoration-deleted);
+}
+
+/* Why: inline deleted lines compete with the new code at full brightness. */
+.monaco-diff-editor .view-lines.line-delete .view-line {
+  opacity: 0.6;
+}
+
 /* Why: Monaco's find-widget button tooltips (Close, Find in Selection, etc.)
    render inside a `.context-view` wrapper → `.workbench-hover-container` →
    `.workbench-hover.compact`, positioned above the target button. The wrapper's
