@@ -5,10 +5,12 @@ import type { TuiAgent } from '../../shared/tui-agent'
 import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
 import { repoIsRemote } from '../../shared/agent-launch-remote'
 import { getRepoSshConnectionId } from '../../shared/execution-host'
-import { isTuiAgent } from '../../shared/tui-agent-config'
+import { isTuiAgent, TUI_AGENT_CONFIG } from '../../shared/tui-agent-config'
 import { isTuiAgentEnabled, pickTuiAgent } from '../../shared/tui-agent-selection'
 import { resolveAgentStartupPlanInputs } from '../../shared/agent-startup-plan-inputs'
 import { buildAgentDraftLaunchPlan, buildAgentStartupPlan } from '../../shared/tui-agent-startup'
+import { applyAgentWorkspaceTrust } from '../agent-workspace-trust'
+import { markRemoteAgentWorkspaceTrusted } from '../remote-agent-trust-presets'
 import {
   detectInstalledAgentsWithShellPathHydration,
   detectRemoteAgents
@@ -171,5 +173,41 @@ export function buildWorktreeStartupForAgent(
           }
         }
       : {})
+  }
+}
+
+export async function markLocalWorktreeTrusted(
+  agent: TuiAgent,
+  workspacePath: string
+): Promise<void> {
+  const preset = TUI_AGENT_CONFIG[agent].preflightTrust
+  if (!preset) {
+    return
+  }
+  try {
+    await applyAgentWorkspaceTrust(preset, workspacePath, {
+      env: undefined,
+      claudeAuth: null,
+      wslDistro: null,
+      connectionId: null
+    })
+  } catch {
+    // The agent can still accept its own trust prompt.
+  }
+}
+
+export async function markRemoteWorktreeTrusted(
+  agent: TuiAgent,
+  connectionId: string,
+  workspacePath: string
+): Promise<void> {
+  const preset = TUI_AGENT_CONFIG[agent].preflightTrust
+  if (!preset) {
+    return
+  }
+  try {
+    await markRemoteAgentWorkspaceTrusted({ preset, connectionId, workspacePath })
+  } catch {
+    // The agent can still accept its own trust prompt.
   }
 }

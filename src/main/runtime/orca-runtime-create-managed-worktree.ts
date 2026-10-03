@@ -89,7 +89,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
     // the client against a remote path.
     const createRoute = resolveWorktreeCreateRoute(repo)
     if (isFolderRepo(repo)) {
-      // A folder workspace is a registration, not a filesystem create, so it is host-agnostic.
+      // Folder registration is host-agnostic; agent trust still follows the workspace host.
       return createRuntimeFolderWorktree({
         request: args,
         repo,
@@ -101,6 +101,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
           store: this.store,
           ptySpawnAvailable: Boolean(this.ptyController?.spawn),
           createTerminal: (selector, options) => this.createTerminal(selector, options),
+          markTrusted: (agent, path) => this.markWorkspaceTrustedForAgent(agent, createRoute, path),
           pasteDraft: (handle, draft) => this.pasteStartupDraftWhenReady(handle, draft),
           sendFollowup: (handle, followup) => this.sendStartupFollowupWhenReady(handle, followup),
           invalidateResolvedWorktrees: () => this.invalidateResolvedWorktreeCache(),
