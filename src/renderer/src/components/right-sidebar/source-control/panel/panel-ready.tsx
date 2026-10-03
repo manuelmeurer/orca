@@ -1,6 +1,7 @@
 import { SourceControlBranchPicker } from '../branches/SourceControlBranchPicker'
 import { BulkActionBar } from '../commit/bulk-action-bar'
 import { SourceControlHeaderToolbar } from './header-toolbar'
+import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
 import { SourceControlNotesShelf } from '../notes/notes-shelf'
 import { SourceControlPanelContent } from './panel-content'
 import { SourceControlPanelDialogs } from './panel-dialogs'
@@ -123,45 +124,47 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
         }
         onKeyDown={handleSourceControlKeyDown}
       >
-        <SourceControlHeaderToolbar
-          headControl={
-            gitIdentityDisplay?.kind === 'branch' ? (
-              <SourceControlBranchPicker model={model} />
-            ) : undefined
-          }
-          {...filter}
-          visibleCreatePrHeaderAction={visibleCreatePrHeaderAction}
-          hostedReview={hostedReview}
-          isCreatePrIntentInFlight={isCreatePrIntentInFlight}
-          isCreatingPr={isCreatingPr || prGenerating}
-          onCreatePrHeaderClick={handleCreatePrHeaderClick}
-          onOpenHostedReviewInChecks={openHostedReviewInChecks}
-          suppressedGitHubPRNumber={
-            suppressedGitHubPRState?.status === 'matched' ? suppressedGitHubPRState.number : null
-          }
-          onRelinkSuppressedGitHubPR={handleRelinkSuppressedGitHubPR}
-          panelActions={panelActions}
-          onRefreshBranchCompare={panelActions.onRefreshBranchCompare}
-          branchSummary={branchSummary}
-          branchLineTotal={branchLineTotal}
-          compareBaseRef={compareBaseRef}
-          headDisplay={gitIdentityDisplay}
-          operationRow={
-            model.conflictOperation === 'unknown' ? null : (
-              <SourceControlOperationRow model={model} worktreeId={currentWorktreeId} />
-            )
-          }
-          graphControl={
-            isGitHistoryVisible ? (
-              <GitGraphOpenButton
-                worktreeId={currentWorktreeId}
-                support={graphSupport}
-                onOpen={openGraph}
-              />
-            ) : null
-          }
-          toolsInFileListHeader={isGitHistoryVisible}
-        />
+        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE && (
+          <SourceControlHeaderToolbar
+            headControl={
+              gitIdentityDisplay?.kind === 'branch' ? (
+                <SourceControlBranchPicker model={model} />
+              ) : undefined
+            }
+            {...filter}
+            visibleCreatePrHeaderAction={visibleCreatePrHeaderAction}
+            hostedReview={hostedReview}
+            isCreatePrIntentInFlight={isCreatePrIntentInFlight}
+            isCreatingPr={isCreatingPr || prGenerating}
+            onCreatePrHeaderClick={handleCreatePrHeaderClick}
+            onOpenHostedReviewInChecks={openHostedReviewInChecks}
+            suppressedGitHubPRNumber={
+              suppressedGitHubPRState?.status === 'matched' ? suppressedGitHubPRState.number : null
+            }
+            onRelinkSuppressedGitHubPR={handleRelinkSuppressedGitHubPR}
+            panelActions={panelActions}
+            onRefreshBranchCompare={panelActions.onRefreshBranchCompare}
+            branchSummary={branchSummary}
+            branchLineTotal={branchLineTotal}
+            compareBaseRef={compareBaseRef}
+            headDisplay={gitIdentityDisplay}
+            operationRow={
+              model.conflictOperation === 'unknown' ? null : (
+                <SourceControlOperationRow model={model} worktreeId={currentWorktreeId} />
+              )
+            }
+            graphControl={
+              isGitHistoryVisible ? (
+                <GitGraphOpenButton
+                  worktreeId={currentWorktreeId}
+                  support={graphSupport}
+                  onOpen={openGraph}
+                />
+              ) : null
+            }
+            toolsInFileListHeader={isGitHistoryVisible}
+          />
+        )}
 
         {activeWorktreeId && worktreePath && diffCommentCount > 0 && (
           <SourceControlNotesShelf

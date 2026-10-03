@@ -7,6 +7,7 @@ import { SourceControlBranchSection, branchSectionCountTitle } from '../listing/
 import { SourceControlContentStatus, SourceControlFilterFeedback } from '../listing/content-status'
 import { SourceControlUncommittedSections } from '../listing/uncommitted-sections'
 import { CompareUnavailable } from '../sync/compare-summary'
+import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
 import { SourceControlCommitSurface } from './commit-surface'
 import { SourceControlForkPushNotice } from './fork-push-notice'
 import type { SourceControlPanelReadyProps } from './panel-props'
@@ -111,6 +112,7 @@ export function SourceControlPanelContent({
     stickyFilterActive
   )
   const commitSurfaceShown =
+    SOURCE_CONTROL_ACTION_CHROME_VISIBLE &&
     scopeKind !== 'commit' &&
     shouldRenderCommitArea(unresolvedConflicts.length, conflictOperation, recovery.supported)
   const showGenericEmptyState =
