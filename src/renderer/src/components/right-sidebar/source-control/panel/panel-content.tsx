@@ -5,6 +5,7 @@ import { SourceControlBranchSection } from '../listing/branch-section'
 import { SourceControlContentStatus } from '../listing/content-status'
 import { SourceControlUncommittedSections } from '../listing/uncommitted-sections'
 import { CompareUnavailable } from '../sync/compare-summary'
+import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
 import { SourceControlCommitSurface } from './commit-surface'
 import { SourceControlForkPushNotice } from './fork-push-notice'
 import type { SourceControlPanelReadyProps } from './panel-props'
@@ -121,9 +122,10 @@ export function SourceControlPanelContent(props: SourceControlPanelReadyProps) {
       {/* Keep CommitArea through clean/mid-commit states (#1448); only active conflict operations replace the action surface. */}
       <SourceControlForkPushNotice pushTarget={activeWorktree.pushTarget ?? null} />
 
-      {shouldRenderCommitArea(unresolvedConflicts.length, conflictOperation) && (
-        <SourceControlCommitSurface {...props} showGenericEmptyState={showGenericEmptyState} />
-      )}
+      {SOURCE_CONTROL_ACTION_CHROME_VISIBLE &&
+        shouldRenderCommitArea(unresolvedConflicts.length, conflictOperation) && (
+          <SourceControlCommitSurface {...props} showGenericEmptyState={showGenericEmptyState} />
+        )}
 
       {hasFilteredUncommittedEntries && (
         <SourceControlUncommittedSections
