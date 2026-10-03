@@ -82,11 +82,8 @@ export function applyTabOrderSortValues(tabs: Tab[], tabOrder: string[]): Tab[] 
   })
 }
 
-export function insertTabIdAtStartOfOrder(
-  tabOrder: readonly string[],
-  tabId: string
-): string[] {
-  return [tabId, ...dedupeTabOrder(tabOrder).filter((id) => id !== tabId)]
+export function insertTabIdAtStartOfOrder(tabOrder: readonly string[], tabId: string): string[] {
+  return [tabId, ...dedupeTabOrder([...tabOrder]).filter((id) => id !== tabId)]
 }
 
 /** Insert after an anchor only within the same pin partition; otherwise append within the new tab’s partition, preserving sibling order. */
