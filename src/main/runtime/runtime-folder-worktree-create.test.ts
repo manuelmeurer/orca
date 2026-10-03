@@ -15,9 +15,16 @@ const repo: Repo = {
 }
 
 function createDeps() {
+  const startupEvents: string[] = []
   const createTerminal = vi
     .fn<CreateArgs['deps']['createTerminal']>()
-    .mockResolvedValue({ handle: 'term-1', worktreeId: 'folder-1', title: null })
+    .mockImplementation(async () => {
+      startupEvents.push('terminal')
+      return { handle: 'term-1', worktreeId: 'folder-1', title: null }
+    })
+  const markTrusted = vi.fn(async () => {
+    startupEvents.push('trusted')
+  })
   const store = {
     getSettings: () => ({ workspaceDir: '/ws', nestWorkspaces: false }),
     setWorktreeMeta: (_id: string, meta: Record<string, unknown>) => meta,
@@ -28,6 +35,7 @@ function createDeps() {
     store: store as unknown as CreateArgs['deps']['store'],
     ptySpawnAvailable: true,
     createTerminal,
+    markTrusted,
     pasteDraft: vi.fn(),
     sendFollowup: vi.fn(),
     invalidateResolvedWorktrees: vi.fn(),
@@ -35,7 +43,7 @@ function createDeps() {
     emitCreated: vi.fn(),
     activate: vi.fn()
   }
-  return { createTerminal, deps }
+  return { createTerminal, deps, markTrusted, startupEvents }
 }
 
 const TAB_ID = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'
@@ -69,5 +77,20 @@ describe('a folder workspace create with a startup agent', () => {
     const options = await startupTerminalOptions()
     expect(options).not.toHaveProperty('tabId')
     expect(options).not.toHaveProperty('leafId')
+  })
+
+  it('trusts the folder before creating its startup terminal', async () => {
+    const { deps, markTrusted, startupEvents } = createDeps()
+
+    await createRuntimeFolderWorktree({
+      request: { repoSelector: `id:${repo.id}`, name: 'task' },
+      repo,
+      createdWithAgent: 'codex',
+      startup: { command: 'codex' },
+      deps
+    })
+
+    expect(markTrusted).toHaveBeenCalledWith('codex', '/folder')
+    expect(startupEvents).toEqual(['trusted', 'terminal'])
   })
 })

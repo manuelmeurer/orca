@@ -3,6 +3,7 @@ import { OrcaRuntimeWithListManagedWorktrees } from './orca-runtime-list-managed
 import type { RuntimeNavigationTarget } from '../../shared/runtime-navigation'
 import { navigationTargetsClients, navigationTargetsHost } from '../../shared/runtime-navigation'
 import { getRepoExecutionHostId, type ExecutionHostId } from '../../shared/execution-host'
+import type { WorktreeCreateRoute } from '../worktree-create-execution-host-route'
 import type { Repo } from '../../shared/repo-types'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { WorktreeStartupLaunch } from '../../shared/worktree/launch-types'
@@ -12,7 +13,9 @@ import type {
 } from './runtime-worktree-agent-startup'
 import {
   buildWorktreeStartupForAgent,
-  buildWorktreeStartupForDraft
+  buildWorktreeStartupForDraft,
+  markLocalWorktreeTrusted,
+  markRemoteWorktreeTrusted
 } from './runtime-worktree-agent-startup'
 import type { AgentLaunchPreferences } from '../../shared/agent-session-host-authority'
 import type { Worktree } from '../../shared/worktree/types'
@@ -160,6 +163,23 @@ export class OrcaRuntimeWithActivateManagedWorktree extends OrcaRuntimeWithListM
       getLaunchPlatform: () => this.getAgentLaunchPlatformForRepo(repo),
       toSessionOptions: (preferences) => this.toAgentSessionOptions(preferences)
     })
+  }
+
+  protected async markWorkspaceTrustedForAgent(
+    agent: TuiAgent,
+    route: WorktreeCreateRoute,
+    workspacePath: string
+  ): Promise<void> {
+    if (this.store?.getSettings().agentWorkspaceTrustEnabled === false) {
+      return
+    }
+    if (route.kind === 'ssh') {
+      await markRemoteWorktreeTrusted(agent, route.connectionId, workspacePath)
+      return
+    }
+    if (route.kind === 'local') {
+      await markLocalWorktreeTrusted(agent, workspacePath)
+    }
   }
 
   protected recordCreatedWorktreeLineage(
