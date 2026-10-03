@@ -1,5 +1,6 @@
 import { BulkActionBar } from '../commit/bulk-action-bar'
 import { SourceControlHeaderToolbar } from './header-toolbar'
+import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
 import { SourceControlNotesShelf } from '../notes/notes-shelf'
 import { SourceControlPanelContent } from './panel-content'
 import { SourceControlPanelDialogs } from './panel-dialogs'
@@ -62,35 +63,37 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
         className="relative flex h-full flex-col overflow-hidden"
         onKeyDown={handleSourceControlKeyDown}
       >
-        <SourceControlHeaderToolbar
-          filterQuery={filterQuery}
-          filterExpanded={filterExpanded}
-          onFilterQueryChange={setFilterQuery}
-          onFilterExpandedChange={setFilterExpanded}
-          visibleCreatePrHeaderAction={visibleCreatePrHeaderAction}
-          hostedReview={hostedReview}
-          isCreatePrIntentInFlight={isCreatePrIntentInFlight}
-          isCreatingPr={isCreatingPr || prGenerating}
-          onCreatePrHeaderClick={handleCreatePrHeaderClick}
-          onOpenHostedReviewInChecks={openHostedReviewInChecks}
-          suppressedGitHubPRNumber={
-            suppressedGitHubPRState?.status === 'matched' ? suppressedGitHubPRState.number : null
-          }
-          onRelinkSuppressedGitHubPR={handleRelinkSuppressedGitHubPR}
-          sourceControlViewMode={sourceControlViewMode}
-          viewModeToggleDisabled={settings === null}
-          onToggleViewMode={handleToggleSourceControlViewMode}
-          onChangeBaseRef={() => setBaseRefDialogOpen(true)}
-          onRefreshBranchCompare={() => void refreshBranchCompare()}
-          branchCompareRefreshDisabled={!branchSummary || branchSummary.status === 'loading'}
-          diffCommentCount={diffCommentCount}
-          onExpandNotes={() => setDiffCommentsExpanded(true)}
-          branchSummary={branchSummary}
-          branchLineTotal={branchLineTotal}
-          compareBaseRef={compareBaseRef}
-          headDisplay={gitIdentityDisplay}
-          manualReviewUrl={manualReviewUrl}
-        />
+        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE && (
+          <SourceControlHeaderToolbar
+            filterQuery={filterQuery}
+            filterExpanded={filterExpanded}
+            onFilterQueryChange={setFilterQuery}
+            onFilterExpandedChange={setFilterExpanded}
+            visibleCreatePrHeaderAction={visibleCreatePrHeaderAction}
+            hostedReview={hostedReview}
+            isCreatePrIntentInFlight={isCreatePrIntentInFlight}
+            isCreatingPr={isCreatingPr || prGenerating}
+            onCreatePrHeaderClick={handleCreatePrHeaderClick}
+            onOpenHostedReviewInChecks={openHostedReviewInChecks}
+            suppressedGitHubPRNumber={
+              suppressedGitHubPRState?.status === 'matched' ? suppressedGitHubPRState.number : null
+            }
+            onRelinkSuppressedGitHubPR={handleRelinkSuppressedGitHubPR}
+            sourceControlViewMode={sourceControlViewMode}
+            viewModeToggleDisabled={settings === null}
+            onToggleViewMode={handleToggleSourceControlViewMode}
+            onChangeBaseRef={() => setBaseRefDialogOpen(true)}
+            onRefreshBranchCompare={() => void refreshBranchCompare()}
+            branchCompareRefreshDisabled={!branchSummary || branchSummary.status === 'loading'}
+            diffCommentCount={diffCommentCount}
+            onExpandNotes={() => setDiffCommentsExpanded(true)}
+            branchSummary={branchSummary}
+            branchLineTotal={branchLineTotal}
+            compareBaseRef={compareBaseRef}
+            headDisplay={gitIdentityDisplay}
+            manualReviewUrl={manualReviewUrl}
+          />
+        )}
 
         {/* Why: hidden when count is 0 — notes are created from the diff view, so an empty Notes shelf here is pure chrome. */}
         {activeWorktreeId && worktreePath && diffCommentCount > 0 && (
