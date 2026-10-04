@@ -5,6 +5,7 @@ import type {
 } from '../runtime-worktree-lineage-resolution'
 import { OrcaRuntimeWithGetWorktreeTerminalProvisioningHost } from './startup/workspace-terminal-provisioning'
 import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
+import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 import type { CreateWorktreeResult } from '../../../shared/worktree/create-types'
 import { isFolderRepo } from '../../../shared/repo-kind'
 import { notifyLineageRepos } from '../../worktree-lineage-change-notification'
@@ -144,7 +145,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
       throw new SshHostNotServedError(createRoute.connectionId)
     }
     const localCreate = await createRuntimeLocalManagedWorktree({
-      request: this.inheritParentWorkspaceStatus(args, lineageResolution),
+      request: withParentWorkspaceStatus(args, lineageResolution, store),
       repo,
       store: this.requireStore(),
       createdWithAgent: effectiveCreatedWithAgent,

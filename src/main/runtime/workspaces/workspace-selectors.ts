@@ -25,8 +25,6 @@ import type { RuntimeStore } from '../runtime-store-contract'
 import type { RuntimeWorkspaceCatalog } from './workspace-catalog'
 import { areWorktreePathsEqual } from '../../git/worktree-path-comparison'
 import { mergeWorktree } from '../../ipc/worktree-metadata-merge'
-import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
-import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 
 export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree {
   protected abstract hasFreshResolvedWorktreeCache(
@@ -138,13 +136,6 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
       input,
       childRepo ? getRepoExecutionHostId(childRepo) : undefined
     )
-  }
-
-  protected inheritParentWorkspaceStatus(
-    args: RuntimeManagedWorktreeCreateArgs,
-    lineage: WorktreeLineageResolution
-  ): RuntimeManagedWorktreeCreateArgs {
-    return withParentWorkspaceStatus(args, lineage)
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {
