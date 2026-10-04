@@ -20,7 +20,7 @@ vi.mock('../../../telemetry/client', () => ({ track: mocks.track, isTelemetryEna
 vi.mock('../../../git/worktrees/creation/create-event-repo-probe', () => ({
   probeCreateEventRepoFacts: mocks.probe
 }))
-vi.mock('./runtime-local-worktree-create', () => ({
+vi.mock('../../runtime-local-worktree-create', () => ({
   createRuntimeLocalManagedWorktree: mocks.createLocal
 }))
 vi.mock('./runtime-folder-worktree-create', () => ({
