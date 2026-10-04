@@ -3,6 +3,8 @@ import type { ResolvedWorktree } from '../runtime-worktree-path-identity'
 import { splitWorktreeIdForFilesystem, worktreeIdComparisonKey } from '../../../shared/worktree/id'
 import { branchSelectorMatches, runtimePathsEqual } from '../runtime-worktree-path-identity'
 import { getRepoExecutionHostId, getWorktreeExecutionHostId } from '../../../shared/execution-host'
+import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
+import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 import type {
   WorktreeLineageInput,
   WorktreeLineageResolution
@@ -126,6 +128,13 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
       input,
       childRepo ? getRepoExecutionHostId(childRepo) : undefined
     )
+  }
+
+  protected inheritParentWorkspaceStatus(
+    args: RuntimeManagedWorktreeCreateArgs,
+    lineage: WorktreeLineageResolution
+  ): RuntimeManagedWorktreeCreateArgs {
+    return withParentWorkspaceStatus(args, lineage)
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {

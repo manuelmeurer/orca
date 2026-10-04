@@ -157,7 +157,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
       throw new SshHostNotServedError(createRoute.connectionId)
     }
     const localCreate = await createRuntimeLocalManagedWorktree({
-      request: args,
+      request: this.inheritParentWorkspaceStatus(args, lineageResolution),
       repo,
       store: this.requireStore(),
       createdWithAgent: effectiveCreatedWithAgent,
