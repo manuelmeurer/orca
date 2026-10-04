@@ -22,6 +22,7 @@ import { startRuntimeLocalWorktreeTerminals } from '../runtime-local-worktree-te
 import { trackRuntimeWorkspaceCreate } from '../../workspace-create-telemetry'
 import { assertOpenCodeModelLaunchPreferencesAbsent } from '../../opencode/opencode-model-startup-plan'
 import { resolveWorktreeCreateAgentStartup } from '../runtime-worktree-agent-startup'
+import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 import type { RuntimeWorkspaceCreateEvents } from '../../workspace-create-telemetry'
 import { createdWorkspaceActivationCallbacks } from './workspace-create-activation'
 import { assertWslMoveRepoWritable } from '../../persistence/moving-wsl-projects/wsl-move-scope-guard'
@@ -157,7 +158,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
       throw new SshHostNotServedError(createRoute.connectionId)
     }
     const localCreate = await createRuntimeLocalManagedWorktree({
-      request: this.inheritParentWorkspaceStatus(args, lineageResolution),
+      request: withParentWorkspaceStatus(args, lineageResolution, this.requireStore()),
       repo,
       store: this.requireStore(),
       createdWithAgent: effectiveCreatedWithAgent,
