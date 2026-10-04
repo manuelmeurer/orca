@@ -17,6 +17,8 @@ import type {
   WorktreeLineageInput,
   WorktreeLineageResolution
 } from '../runtime-worktree-lineage-resolution'
+import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
+import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 import type { OrchestrationDb } from '../orchestration/db/orchestration-db'
 import { resolveNestedWorkerMaxDepth } from '../../../shared/nested-worker-depth'
 import { resolveOrchestrationHeartbeatMinutes } from '../../../shared/orchestration-heartbeat'
@@ -146,6 +148,13 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
       input,
       childRepo ? getRepoExecutionHostId(childRepo) : undefined
     )
+  }
+
+  protected inheritParentWorkspaceStatus(
+    args: RuntimeManagedWorktreeCreateArgs,
+    lineage: WorktreeLineageResolution
+  ): RuntimeManagedWorktreeCreateArgs {
+    return withParentWorkspaceStatus(args, lineage)
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {
