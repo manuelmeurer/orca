@@ -40,7 +40,10 @@ function makeRuntime(repo: Record<string, unknown>): OrcaRuntimeService {
   const runtime = new OrcaRuntimeService(store as never)
   const internals = runtime as unknown as RuntimeInternals
   vi.spyOn(internals, 'resolveRepoSelector').mockResolvedValue(repo)
-  vi.spyOn(internals, 'resolveLineageForWorktreeCreate').mockResolvedValue(null)
+  vi.spyOn(internals, 'resolveLineageForWorktreeCreate').mockResolvedValue({
+    kind: 'none',
+    warnings: []
+  })
   vi.spyOn(internals, 'recordCreatedWorktreeLineage').mockReturnValue({
     lineage: null,
     workspaceLineage: null,
