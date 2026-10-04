@@ -140,7 +140,7 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
     args: RuntimeManagedWorktreeCreateArgs,
     lineage: WorktreeLineageResolution
   ): RuntimeManagedWorktreeCreateArgs {
-    return withParentWorkspaceStatus(args, lineage)
+    return withParentWorkspaceStatus(args, lineage, this.store)
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {

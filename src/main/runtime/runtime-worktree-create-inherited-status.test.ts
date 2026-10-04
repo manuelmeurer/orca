@@ -13,17 +13,50 @@ vi.mock('./runtime-local-worktree-create', () => ({
 }))
 
 import type { FolderWorkspace } from '../../shared/folder-workspace-types'
+import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { WorkspaceStatus } from '../../shared/worktree/types'
 import { mergeWorktree } from '../ipc/worktree-metadata-merge'
 import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
 import { OrcaRuntimeService } from './orca-runtime'
-import { withParentWorkspaceStatus } from './runtime-worktree-create-inherited-status'
+import {
+  withParentWorkspaceStatus,
+  type ParentWorkspaceStatusStore
+} from './runtime-worktree-create-inherited-status'
 import type { WorktreeLineageResolution } from './runtime-worktree-lineage-resolution'
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 
 const request: RuntimeManagedWorktreeCreateArgs = { repoSelector: 'id:repo-1', name: 'child' }
+const PARENT_ID = 'repo-1::/workspaces/parent'
 
-function worktreeParent(workspaceStatus?: WorkspaceStatus): WorktreeLineageResolution {
+function makeMeta(overrides: Partial<WorktreeMeta> = {}): WorktreeMeta {
+  return {
+    displayName: 'parent',
+    comment: '',
+    linkedIssue: null,
+    linkedPR: null,
+    linkedLinearIssue: null,
+    isArchived: false,
+    isUnread: false,
+    isPinned: false,
+    sortOrder: 0,
+    lastActivityAt: 0,
+    ...overrides
+  }
+}
+
+function makeStore(
+  meta: Record<string, WorktreeMeta> = {},
+  metaForHost: Record<string, WorktreeMeta> = {}
+): ParentWorkspaceStatusStore {
+  return {
+    getRepo: () => undefined,
+    getWorktreeMeta: (worktreeId) => meta[worktreeId],
+    getWorktreeMetaForHost: (worktreeId, hostId) => metaForHost[`${hostId}|${worktreeId}`]
+  }
+}
+
+// The snapshot status is what the short-lived resolved-worktree cache returned for the parent.
+function worktreeParent(snapshotStatus?: WorkspaceStatus): WorktreeLineageResolution {
   const git = {
     path: '/workspaces/parent',
     head: 'abc123',
@@ -32,19 +65,11 @@ function worktreeParent(workspaceStatus?: WorkspaceStatus): WorktreeLineageResol
     isMainWorktree: false
   }
   const worktree: ResolvedWorktree = {
-    ...mergeWorktree('repo-1', git, {
-      displayName: 'parent',
-      comment: '',
-      linkedIssue: null,
-      linkedPR: null,
-      linkedLinearIssue: null,
-      isArchived: false,
-      isUnread: false,
-      isPinned: false,
-      sortOrder: 0,
-      lastActivityAt: 0,
-      ...(workspaceStatus ? { workspaceStatus } : {})
-    }),
+    ...mergeWorktree(
+      'repo-1',
+      git,
+      makeMeta(snapshotStatus ? { workspaceStatus: snapshotStatus } : {})
+    ),
     parentWorktreeId: null,
     childWorktreeIds: [],
     lineage: null,
@@ -89,33 +114,57 @@ function folderParent(workspaceStatus?: WorkspaceStatus): WorktreeLineageResolut
 }
 
 describe('withParentWorkspaceStatus', () => {
-  it('starts a child worktree in its parent worktree status', () => {
-    expect(withParentWorkspaceStatus(request, worktreeParent('completed')).workspaceStatus).toBe(
-      'completed'
+  it('reads the parent worktree status from persisted metadata, not the resolved snapshot', () => {
+    const store = makeStore({ [PARENT_ID]: makeMeta({ workspaceStatus: 'completed' }) })
+    expect(
+      withParentWorkspaceStatus(request, worktreeParent('in-progress'), store).workspaceStatus
+    ).toBe('completed')
+  })
+
+  it('prefers the parent row owned by its execution host', () => {
+    const store = makeStore(
+      { [PARENT_ID]: makeMeta({ workspaceStatus: 'todo' }) },
+      { [`local|${PARENT_ID}`]: makeMeta({ workspaceStatus: 'in-review' }) }
     )
+    expect(
+      withParentWorkspaceStatus(request, worktreeParent('in-progress'), store).workspaceStatus
+    ).toBe('in-review')
+  })
+
+  it('ignores a same-id row owned by another host', () => {
+    const store = makeStore({
+      [PARENT_ID]: makeMeta({ hostId: 'ssh:other', workspaceStatus: 'todo' })
+    })
+    expect(
+      withParentWorkspaceStatus(request, worktreeParent('in-review'), store).workspaceStatus
+    ).toBe('in-review')
   })
 
   it('starts a child worktree in its parent folder status', () => {
-    expect(withParentWorkspaceStatus(request, folderParent('in-review')).workspaceStatus).toBe(
-      'in-review'
-    )
+    expect(
+      withParentWorkspaceStatus(request, folderParent('in-review'), makeStore()).workspaceStatus
+    ).toBe('in-review')
   })
 
   it('keeps an explicitly requested status', () => {
     const explicit = { ...request, workspaceStatus: 'todo' }
-    expect(withParentWorkspaceStatus(explicit, worktreeParent('completed')).workspaceStatus).toBe(
-      'todo'
-    )
+    const store = makeStore({ [PARENT_ID]: makeMeta({ workspaceStatus: 'completed' }) })
+    expect(
+      withParentWorkspaceStatus(explicit, worktreeParent('completed'), store).workspaceStatus
+    ).toBe('todo')
   })
 
   it('leaves the status unset without a parent', () => {
     expect(
-      withParentWorkspaceStatus(request, { kind: 'none', warnings: [] }).workspaceStatus
+      withParentWorkspaceStatus(request, { kind: 'none', warnings: [] }, makeStore())
+        .workspaceStatus
     ).toBeUndefined()
   })
 
   it('leaves the status unset when the parent folder has none', () => {
-    expect(withParentWorkspaceStatus(request, folderParent()).workspaceStatus).toBeUndefined()
+    expect(
+      withParentWorkspaceStatus(request, folderParent(), makeStore()).workspaceStatus
+    ).toBeUndefined()
   })
 })
 
@@ -129,16 +178,18 @@ describe('createManagedWorktree parent workspace status', () => {
 
   function makeRuntime(repo: Record<string, unknown>) {
     const store = {
+      ...makeStore({ [PARENT_ID]: makeMeta({ workspaceStatus: 'completed' }) }),
       getSettings: () => ({ disabledTuiAgents: [], workspaceDir: '/tmp/workspaces' }),
       getProjectHostSetups: () => []
     }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the create path only reads these two store methods before the stubbed create.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the create path only reads these store methods before the stubbed create.
     const runtime = new OrcaRuntimeService(store as never)
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: exposes protected members for stubbing, matching the other create-path tests.
     const internals = runtime as unknown as RuntimeInternals
     vi.spyOn(internals, 'resolveRepoSelector').mockResolvedValue(repo)
+    // The resolved parent is a stale snapshot; the store already holds the parent's new status.
     vi.spyOn(internals, 'resolveLineageForWorktreeCreate').mockResolvedValue(
-      worktreeParent('completed')
+      worktreeParent('in-progress')
     )
     vi.spyOn(internals, 'recordCreatedWorktreeLineage').mockReturnValue({
       lineage: null,
