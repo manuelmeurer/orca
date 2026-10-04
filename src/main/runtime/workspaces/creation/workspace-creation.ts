@@ -17,7 +17,7 @@ import { SshHostNotServedError } from '../../../providers/ssh-host-not-served-er
 import { createRuntimeFolderWorktree } from './runtime-folder-worktree-create'
 import type { RuntimeNavigationTarget } from '../../../../shared/runtime-navigation'
 import type { Worktree } from '../../../../shared/worktree/types'
-import { createRuntimeLocalManagedWorktree } from './runtime-local-worktree-create'
+import { createRuntimeLocalManagedWorktree } from '../../runtime-local-worktree-create'
 import type { PreparationRearmHolder } from '../../../workspaces/creation/preparation/worktree-create-preparation'
 import {
   buildRuntimeSetupReceipt,
@@ -40,7 +40,7 @@ import { workspaceLifecycleKey } from '../lifecycle/workspace-lifecycle-commands
 import { getRepoExecutionHostId } from '../../../../shared/execution-host'
 import { applyWorkspaceCreatePluginHook } from '../../../plugins/hooks/workspace-create-plugin-hook'
 import { withProjectWorktreeCreate } from '../../../workspaces/creation/worktree-create-in-flight'
-import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
+import { withParentWorkspaceStatus } from '../../runtime-worktree-create-inherited-status'
 
 export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
   abstract resolveLineageForWorktreeCreate(
@@ -168,7 +168,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
       throw new SshHostNotServedError(createRoute.connectionId)
     }
     const localCreate = await createRuntimeLocalManagedWorktree({
-      request: withParentWorkspaceStatus(args, lineageResolution),
+      request: withParentWorkspaceStatus(args, lineageResolution, store),
       repo,
       store: this.requireStore(),
       createdWithAgent: effectiveCreatedWithAgent,
