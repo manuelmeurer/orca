@@ -215,6 +215,7 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       ...reviewLinks,
       ...linearIssueLink,
       comment: getOptionalStringFlag(flags, 'comment'),
+      workspaceStatus: getOptionalStringFlag(flags, 'workspace-status'),
       runHooks: flags.get('run-hooks') === true,
       activate,
       // Why: the CLI pairs as a runtime device but is not a viewer, so caller-scoped
