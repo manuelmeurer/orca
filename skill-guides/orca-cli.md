@@ -135,7 +135,7 @@ ORCA worktree set --worktree active --comment "fix implemented; running integrat
 
 Update after a repro, fix, validation, handoff, or blocker. Keep it short and current. A failed comment update is not an error to surface unless the user asked for Orca state.
 
-Card status uses `--workspace-status <id>`; defaults are `todo`, `in-progress`, `in-review`, `completed`.
+Card status uses `--workspace-status <id>`; defaults are `todo`, `in-progress`, `in-review`, `completed`. A child worktree starts in its parent's status; pass `--workspace-status` to `worktree create` to choose another.
 
 ## Terminals
 
