@@ -355,6 +355,9 @@ export default function DiffViewer({
               ...buildDiffEditorHideUnchangedOptions(settings?.diffCollapseUnchangedRegions),
               automaticLayout: true,
               renderOverviewRuler: true,
+              // Why: the green/red diff overview already maps the changes; the inner editor
+              // ruler beside it only adds lint, find and cursor marks.
+              overviewRulerLanes: 0,
               scrollbar: diffEditorScrollbarOptions,
               padding: { top: 0 },
               find: monacoFindOptions
