@@ -170,7 +170,7 @@ function deriveStructuredAgentSendTargets(
   status: 'with-status' | 'without-status'
 ): StructuredAgentSendTarget[] {
   const targets: StructuredAgentSendTarget[] = []
-  for (const tab of state.unifiedTabsByWorktree[worktreeId] ?? []) {
+  for (const tab of state.unifiedTabsByWorktree?.[worktreeId] ?? []) {
     if (!isStructuredTab(tab) || !tab.agentSessionAgent) {
       continue
     }

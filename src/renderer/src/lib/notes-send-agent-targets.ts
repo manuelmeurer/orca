@@ -24,6 +24,7 @@ export type NotesSendAgentTargetState = RunningAgentTargetState &
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
@@ -164,6 +165,7 @@ function deriveTitleHintAgentTarget(
       ? {
           paneKey,
           tabId: tab.id,
+          leafId,
           messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
           agentType: tab.launchAgent ?? foregroundAgent,
           tabTitle: tab.title,

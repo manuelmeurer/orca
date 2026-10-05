@@ -6,10 +6,7 @@ import {
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import { makePaneKey } from '../../../shared/stable-pane-id'
 import type { PaneForegroundAgentEntry } from '@/store/slices/pane-foreground-agent'
-import {
-  deriveRunningAgentSendTargets,
-  type RunningAgentTargetState
-} from './running-agent-targets'
+import { deriveRunningAgentSendTargets } from './running-agent-targets'
 import {
   deriveNotesSendAgentTargets,
   type NotesSendAgentTargetState
@@ -65,11 +62,12 @@ function baseState(args: {
   return {
     agentStatusByPaneKey: args.agentStatusByPaneKey ?? {},
     tabsByWorktree: { [WORKTREE_ID]: [tab(args.tabTitle)] },
+    unifiedTabsByWorktree: {},
     terminalLayoutsByTabId: { [TAB_ID]: layout() },
     ptyIdsByTabId: { [TAB_ID]: [PTY_ID] },
     runtimePaneTitlesByTabId: {},
     paneForegroundAgentByPaneKey: args.foreground ? { [PANE_KEY]: args.foreground } : {}
-  } as NotesSendAgentTargetState
+  }
 }
 
 describe('running agent send targets: live foreground process proof', () => {
@@ -79,7 +77,7 @@ describe('running agent send targets: live foreground process proof', () => {
         tabTitle: 'zsh',
         agentStatusByPaneKey: { [PANE_KEY]: staleEntry() },
         foreground: { agent: 'codex', shellForeground: false }
-      }) as RunningAgentTargetState,
+      }),
       WORKTREE_ID,
       NOW
     )
@@ -94,7 +92,7 @@ describe('running agent send targets: live foreground process proof', () => {
         tabTitle: 'zsh',
         agentStatusByPaneKey: { [PANE_KEY]: staleEntry() },
         foreground: { agent: null, shellForeground: true }
-      }) as RunningAgentTargetState,
+      }),
       WORKTREE_ID,
       NOW
     )
@@ -109,7 +107,7 @@ describe('running agent send targets: live foreground process proof', () => {
       baseState({
         tabTitle: 'zsh',
         agentStatusByPaneKey: { [PANE_KEY]: staleEntry() }
-      }) as RunningAgentTargetState,
+      }),
       WORKTREE_ID,
       NOW
     )
