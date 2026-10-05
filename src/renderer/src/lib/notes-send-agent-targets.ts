@@ -3,7 +3,7 @@ import type { AppState } from '@/store/types'
 import { isTerminalLeafId, makePaneKey } from '../../../shared/stable-pane-id'
 import { resolveTerminalTitleAgentType } from '../../../shared/terminal-title-agent-type'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TerminalAgent } from '../../../shared/terminal-agent'
 import { detectAgentSendTitleStatus } from './agent-send-title-status'
 import {
   resolveRuntimePaneTitleLeafResolution,
@@ -24,6 +24,7 @@ export type NotesSendAgentTargetState = RunningAgentTargetState &
 export type NotesSendAgentTarget = {
   paneKey: string
   tabId: string
+  leafId?: string
   messageTarget: AgentMessageTarget
   agentType: AgentType | null | undefined
   tabTitle: string
@@ -119,7 +120,7 @@ function toNotesSendAgentTarget(target: RunningAgentSendTarget): NotesSendAgentT
 function resolveForegroundAgentProcess(
   state: NotesSendAgentTargetState,
   paneKey: string
-): TuiAgent | null {
+): TerminalAgent | null {
   const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
   if (!foreground?.agent || foreground.shellForeground === true) {
     return null
@@ -164,6 +165,7 @@ function deriveTitleHintAgentTarget(
       ? {
           paneKey,
           tabId: tab.id,
+          leafId,
           messageTarget: { kind: 'terminal', tabId: tab.id, leafId },
           agentType: tab.launchAgent ?? foregroundAgent,
           tabTitle: tab.title,
