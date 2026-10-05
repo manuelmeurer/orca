@@ -13,7 +13,6 @@ import {
 } from './worktree-delete-lineage-dependencies'
 import { getWorktreeOnHostFromState } from '@/store/selectors'
 import type { Worktree } from '../../../../shared/worktree/types'
-import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import {
   composeWorktreeHostIdentity,
   getWorktreeHostIdentity
@@ -29,6 +28,7 @@ import type { PreservedBranchCleanup } from '@/lib/preserved-branch-cleanup'
 import type { WorktreeDeleteWithToastOptions } from './worktree-delete-request'
 import { beginWorktreeSnapshotPruneBatch } from './worktree-snapshot-prune-batch'
 import { runWorktreeDeleteWithToast } from './run-worktree-delete-with-toast'
+import { runWorktreeDeleteGroup } from './worktree-delete-group-runner'
 
 export async function runWorktreeDeletesInParallel(
   targets: readonly Pick<
@@ -212,29 +212,11 @@ export async function runWorktreeDeletesInParallel(
       await Promise.all(uniqueTargets.map((target) => schedule(target)))
     } else {
       await Promise.all(
-        Array.from(groups.values()).map(async (group) => {
-          const started: { path: string; settled: Promise<void> }[] = []
-          // Why only this machine's repos run in parallel: its host serializes the branch cleanup per
-          // repo and limits concurrent deletes, while SSH and paired (possibly older) hosts race the
-          // repo's ref locks when one repo deletes in parallel (#2259).
-          const serialized =
-            (group[0]?.hostId ?? LOCAL_EXECUTION_HOST_ID) !== LOCAL_EXECUTION_HOST_ID
-          for (const target of group) {
-            // A descendant's outcome decides whether its ancestor may be deleted at all.
-            const descendants = started.filter((earlier) =>
-              isStrictWorktreeDescendantPath(target.path, earlier.path)
-            )
-            if (descendants.length > 0) {
-              await Promise.all(descendants.map((earlier) => earlier.settled))
-            }
-            const settled = runInWorktreeDeleteTurn(target.id, () => executeTarget(target))
-            started.push({ path: target.path, settled })
-            if (serialized) {
-              await settled
-            }
-          }
-          await Promise.all(started.map((entry) => entry.settled))
-        })
+        Array.from(groups.values()).map((group) =>
+          runWorktreeDeleteGroup(group, (target) =>
+            runInWorktreeDeleteTurn(target.id, () => executeTarget(target))
+          )
+        )
       )
     }
   } finally {

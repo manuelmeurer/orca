@@ -1897,6 +1897,9 @@
         "DeleteWorktreeDirtyChangeHint": {
           "8e2994ce28": "Deleting this workspace permanently removes these changes from disk."
         },
+        "DeleteWorktreeLineageNotice": {
+          "ad407c2d55": "more"
+        },
         "FolderWorkspaceComposerDialog": {
           "chooseSourceProject": "Choose task source",
           "connectFailed": "Failed to connect to project.",

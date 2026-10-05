@@ -4,7 +4,11 @@ import type { LocalBaseRefRefreshResult } from '../../../../shared/worktree/base
 import { toast } from 'sonner'
 import type { RuntimeEnvironmentCallRequest } from '../../runtime/runtime-compatibility-test-fixture'
 import { folderWorkspaceKey, worktreeWorkspaceKey } from '../../../../shared/workspace-scope'
-import { makeWorkspaceLineage, makeWorktree } from './worktrees-slice-test-fixtures'
+import {
+  makeFolderWorkspace,
+  makeWorkspaceLineage,
+  makeWorktree
+} from './worktrees-slice-test-fixtures'
 import {
   createTestStore,
   mockApi,
@@ -291,7 +295,8 @@ describe('createWorktree base status merge', () => {
       capture: { source: 'active-workspace', confidence: 'explicit' }
     })
     store.setState({
-      activeWorkspaceKey: folderWorkspaceKey('folder-1')
+      activeWorkspaceKey: folderWorkspaceKey('folder-1'),
+      folderWorkspaces: [makeFolderWorkspace({ id: 'folder-1' })]
     } as Partial<AppState>)
     mockApi.worktrees.create.mockResolvedValue({ worktree: wt, workspaceLineage })
 

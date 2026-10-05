@@ -123,9 +123,9 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       await this.resolveLineageForWorktreeCreate(lineageInput),
       createRoute.hostId
     )
-    const recordCreatedLineage = (
-      worktree: Pick<CreateWorktreeResult['worktree'], 'id' | 'instanceId'>
-    ) => this.recordCreatedWorktreeLineage(worktree, lineageResolution, createRoute.hostId)
+    // Lineage is recorded where the worktree was created, never on the requesting client.
+    const recordLineage = (worktree: Pick<CreateWorktreeResult['worktree'], 'id' | 'instanceId'>) =>
+      this.recordCreatedWorktreeLineage(worktree, lineageResolution, createRoute.hostId)
     if (createRoute.kind === 'runtime') {
       throw new ExecutionHostNotDispatchableError(createRoute.hostId)
     }
@@ -143,7 +143,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         ...(effectiveDraftPaste ? { startupDraftPaste: effectiveDraftPaste } : {}),
         timing
       })
-      const recordedLineage = recordCreatedLineage(result.worktree)
+      const recordedLineage = recordLineage(result.worktree)
       this.emitWorktreeLifecycle({
         kind: 'created',
         worktreeId: result.worktree.id,
@@ -182,7 +182,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
         this.getOrStartRemoteTrackingBaseRefresh(path, base, ...options),
       fetchRemote: (path, remote, ...options) =>
         this.fetchRemoteWithCache(path, remote, ...options),
-      onWorktreeMetadataPersisted: recordCreatedLineage,
+      onWorktreeMetadataPersisted: recordLineage,
       rearm,
       timing
     })
