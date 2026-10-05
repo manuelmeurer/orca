@@ -14,10 +14,10 @@ import { getAgentLaunchPlatformForRepo } from './runtime-agent-launch-resolution
 import {
   resolveRepoWorktreeRows,
   resolveScopedWorktreeIdRow,
-  type RepoWorktreeRow
+  type RepoWorktreeRow,
+  type RepoWorktreeRowDeps
 } from './repo-worktree-row-resolution'
 import { projectResolvedWorktreeLineage } from '../../shared/resolved-worktree-lineage'
-import type { RepoWorktreeRowDeps } from './repo-worktree-row-resolution'
 import { listRuntimeFolderWorkspaces } from './runtime-worktree-filesystem'
 import type { ExecutionHostId } from '../../shared/execution-host'
 import type { Repo } from '../../shared/repo-types'

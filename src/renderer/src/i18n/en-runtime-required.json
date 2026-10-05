@@ -1884,6 +1884,9 @@
         "CacheTimer": {
           "07729cc155": "expired"
         },
+        "DeleteWorktreeLineageNotice": {
+          "ad407c2d55": "more"
+        },
         "FolderWorkspaceComposerDialog": {
           "chooseSourceProject": "Choose task source",
           "connectFailed": "Failed to connect to project.",
