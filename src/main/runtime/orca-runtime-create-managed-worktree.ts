@@ -121,6 +121,7 @@ export class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWork
       await this.resolveLineageForWorktreeCreate(lineageInput),
       createRoute.hostId
     )
+    // Lineage is recorded where the worktree was created, never on the requesting client.
     const recordLineage = (worktree) =>
       this.recordCreatedWorktreeLineage(worktree, lineageResolution, createRoute.hostId)
     if (createRoute.kind === 'runtime') {
