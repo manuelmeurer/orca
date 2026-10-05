@@ -355,6 +355,8 @@ export default function DiffViewer({
       ...buildDiffEditorHideUnchangedOptions(diffCollapseUnchangedRegions),
       automaticLayout: true,
       renderOverviewRuler: true,
+      // The diff overview already maps changes; hide the modified editor's ruler.
+      overviewRulerLanes: 0,
       scrollbar: diffEditorScrollbarOptions,
       padding: { top: 0 },
       find: monacoFindOptions
