@@ -132,7 +132,9 @@ export const gitRepoModuleMock = () => ({
   getBaseRefDefault: getBaseRefDefaultMock,
   resolveDefaultBaseRefWithLocalGit: resolveDefaultBaseRefWithLocalGitMock,
   resolveDefaultBaseRefViaExec: resolveDefaultBaseRefViaExecMock,
-  getDefaultRemote: getDefaultRemoteMock,
+  // Routing assertions track the execution target; remote-list reuse has dedicated tests.
+  getDefaultRemote: (repoPath: string, options?: { wslDistro?: string }) =>
+    getDefaultRemoteMock(repoPath, options),
   getBranchConflictKind: async (
     repoPath: string,
     branch: string,

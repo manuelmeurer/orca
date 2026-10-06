@@ -6,6 +6,40 @@ import { getDefaultTabsLaunch, shouldRunSetupForCreate } from '../effective-hook
 import type { RuntimeManagedWorktreeCreateArgs } from './runtime-managed-worktree-create-types'
 import type { RuntimeStore } from './runtime-store-contract'
 
+export function buildRuntimeSetupReceipt({
+  hookFound,
+  effectiveDecision,
+  shouldRunSetup,
+  didSpawnSetup,
+  didStartInProcessSetupHook,
+  setup,
+  setupTerminalHandle
+}: {
+  hookFound: boolean
+  effectiveDecision: 'run' | 'skip' | 'inherit'
+  shouldRunSetup: boolean
+  didSpawnSetup: boolean
+  didStartInProcessSetupHook: boolean
+  setup: CreateWorktreeResult['setup']
+  setupTerminalHandle?: string
+}): NonNullable<CreateWorktreeResult['setupReceipt']> {
+  // An in-process hook is already running even without a spawned terminal.
+  const state = !hookFound
+    ? 'not_configured'
+    : effectiveDecision === 'skip' || !shouldRunSetup
+      ? 'skipped'
+      : didSpawnSetup || didStartInProcessSetupHook
+        ? 'running'
+        : 'spawn_failed'
+  return {
+    requested: effectiveDecision,
+    hookFound,
+    startupPolicy: setup?.waitForAgentStartup ? 'wait-for-setup' : 'start-immediately',
+    state,
+    ...(setupTerminalHandle ? { terminalHandle: setupTerminalHandle } : {})
+  }
+}
+
 export async function prepareRuntimeLocalWorktreeSetup(args: {
   request: RuntimeManagedWorktreeCreateArgs
   repo: Repo
