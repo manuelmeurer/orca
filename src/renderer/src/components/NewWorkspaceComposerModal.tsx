@@ -96,7 +96,7 @@ function ComposerModalBody({
           }
         }}
         onOpenAutoFocus={(event) => {
-          // Override Radix’s first-tabbable close button with the name/source field for immediate typing.
+          // Override Radix’s first-tabbable close button with the project picker.
           event.preventDefault()
           const content = event.currentTarget as HTMLElement
           getWorkspaceComposerInitialFocusTarget(content)?.focus({ preventScroll: true })
