@@ -297,7 +297,7 @@ describe('createWorktree base status merge', () => {
     store.setState({
       activeWorkspaceKey: folderWorkspaceKey('folder-1'),
       folderWorkspaces: [makeFolderWorkspace({ id: 'folder-1' })]
-    } as Partial<AppState>)
+    } satisfies Partial<AppState>)
     mockApi.worktrees.create.mockResolvedValue({ worktree: wt, workspaceLineage })
 
     await store.getState().createWorktree('repo1', 'feature', 'origin/main')
