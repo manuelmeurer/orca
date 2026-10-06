@@ -4,14 +4,14 @@ const PROJECT_COMBOBOX_TRIGGER_SELECTOR = '[data-project-combobox-root="true"][r
 const LEGACY_REPO_COMBOBOX_TRIGGER_SELECTOR = '[data-repo-combobox-root="true"][role="combobox"]'
 
 export function getWorkspaceComposerInitialFocusTarget(root: ParentNode): HTMLElement | null {
-  // Why: most opens already have a project selected; land on the name/source
-  // field so users can type or press Enter immediately. The source pill
-  // replaces the input when a linked item or branch is pre-filled. Keep
-  // combobox fallbacks for surfaces that omit the smart name field.
+  // Why: land on the project picker first so the project can be checked or
+  // changed before anything else; Tab moves on to the name/source field.
+  // Keep the name field and source pill as fallbacks for surfaces without a
+  // project picker.
   return (
-    root.querySelector<HTMLElement>(WORKSPACE_NAME_INPUT_SELECTOR) ??
-    root.querySelector<HTMLElement>(WORKSPACE_SOURCE_PILL_SELECTOR) ??
     root.querySelector<HTMLElement>(PROJECT_COMBOBOX_TRIGGER_SELECTOR) ??
-    root.querySelector<HTMLElement>(LEGACY_REPO_COMBOBOX_TRIGGER_SELECTOR)
+    root.querySelector<HTMLElement>(LEGACY_REPO_COMBOBOX_TRIGGER_SELECTOR) ??
+    root.querySelector<HTMLElement>(WORKSPACE_NAME_INPUT_SELECTOR) ??
+    root.querySelector<HTMLElement>(WORKSPACE_SOURCE_PILL_SELECTOR)
   )
 }
