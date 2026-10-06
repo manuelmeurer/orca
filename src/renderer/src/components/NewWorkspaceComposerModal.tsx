@@ -94,8 +94,8 @@ function ComposerModalBody({
         onOpenAutoFocus={(event) => {
           // Why: Radix's FocusScope fires this once the dialog has mounted.
           // preventDefault stops it from focusing whatever first-tabbable it
-          // picks (close button), and we instead focus the name/source field
-          // so users can start typing immediately.
+          // picks (close button), and we instead focus the project picker
+          // so the project can be checked first.
           event.preventDefault()
           const content = event.currentTarget as HTMLElement
           getWorkspaceComposerInitialFocusTarget(content)?.focus({ preventScroll: true })
