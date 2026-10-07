@@ -73,6 +73,7 @@ describe('reviewed lineage UI ownership', () => {
       <DeleteWorktreeLineageNotice
         descendants={[legacy, stamped]}
         dirtyChangeCountsByWorktreeId={new Map()}
+        dirtyChangePreviewsByWorktreeId={new Map()}
       />
     )
     expect(markup.match(/Repo on ssh:remote/g)).toHaveLength(3)
