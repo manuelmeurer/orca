@@ -5,7 +5,7 @@ import type { RuntimeMobileSessionTabsResult } from './runtime-session-contracts
 import type { TabGroupLayoutNode } from './tab-types'
 import type { TerminalExitCause } from './terminal-exit-cause'
 import type { TerminalPaneLayoutNode } from './terminal-tab-types'
-import type { TerminalAgent, TuiAgent } from './terminal-agent'
+import type { TerminalAgent } from './terminal-agent'
 export type {
   RuntimeTerminalSend,
   RuntimeTerminalPromptStage,
