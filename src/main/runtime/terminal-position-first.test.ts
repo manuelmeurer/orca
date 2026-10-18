@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { OrcaRuntimeWithCreateTerminal } from './orca-runtime-create-terminal'
+import { OrcaRuntimeWithCreateTerminal } from './terminal/launch/terminal-create'
 import { createDesktopTerminal } from './orca-runtime-create-terminal-desktop'
 import { TERMINAL_LIFECYCLE_METHODS } from './rpc/methods/terminal/terminal-lifecycle-methods'
 import type { TerminalCreateOptions } from './runtime-terminal-contracts'
