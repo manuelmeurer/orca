@@ -28,6 +28,7 @@ import {
   type WorkspaceCreationHandle
 } from '../sidebar-inputs/workspace-creation-registry'
 import { ORCA_SIDEBAR_INPUTS_IS_MAIN } from '../../../shared/sidebar-inputs-switch'
+import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 
 export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWithGetWorktreeTerminalProvisioningHost {
   protected abstract resolveLineageForWorktreeCreate(
@@ -145,7 +146,7 @@ export abstract class OrcaRuntimeWithCreateManagedWorktree extends OrcaRuntimeWi
       throw new SshHostNotServedError(createRoute.connectionId)
     }
     const localCreate = await createRuntimeLocalManagedWorktree({
-      request: this.inheritParentWorkspaceStatus(args, lineageResolution),
+      request: withParentWorkspaceStatus(args, lineageResolution, store),
       repo,
       store: this.requireStore(),
       createdWithAgent: effectiveCreatedWithAgent,

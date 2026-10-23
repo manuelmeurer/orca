@@ -8,8 +8,6 @@ import {
   runtimeRepoSelectorText,
   type RuntimeRepoSelector
 } from '../runtime-repo-selector'
-import type { RuntimeManagedWorktreeCreateArgs } from '../runtime-managed-worktree-create-types'
-import { withParentWorkspaceStatus } from '../runtime-worktree-create-inherited-status'
 import type {
   WorktreeLineageInput,
   WorktreeLineageResolution
@@ -134,13 +132,6 @@ export abstract class RuntimeWorkspaceSelectors extends OrcaRuntimeWithResolveBr
       input,
       childRepo ? getRepoExecutionHostId(childRepo) : undefined
     )
-  }
-
-  protected inheritParentWorkspaceStatus(
-    args: RuntimeManagedWorktreeCreateArgs,
-    lineage: WorktreeLineageResolution
-  ): RuntimeManagedWorktreeCreateArgs {
-    return withParentWorkspaceStatus(args, lineage, this.store)
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {

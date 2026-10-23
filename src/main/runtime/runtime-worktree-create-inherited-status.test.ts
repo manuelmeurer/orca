@@ -172,7 +172,6 @@ describe('createManagedWorktree parent workspace status', () => {
   type RuntimeInternals = {
     resolveRepoSelector: (selector: string) => Promise<unknown>
     resolveLineageForWorktreeCreate: (input: unknown) => Promise<unknown>
-    createManagedRemoteWorktree: (repo: unknown, args: unknown) => Promise<unknown>
     recordCreatedWorktreeLineage: (worktree: unknown, resolution: unknown) => unknown
   }
 
@@ -196,11 +195,7 @@ describe('createManagedWorktree parent workspace status', () => {
       workspaceLineage: null,
       warnings: []
     })
-    const createRemote = vi.fn().mockResolvedValue({
-      worktree: { id: 'wt-1', path: '/srv/app-child', branch: 'child' }
-    })
-    vi.spyOn(internals, 'createManagedRemoteWorktree').mockImplementation(createRemote)
-    return { runtime, createRemote }
+    return { runtime }
   }
 
   it('passes the parent status to a local create', async () => {
@@ -214,22 +209,6 @@ describe('createManagedWorktree parent workspace status', () => {
       expect.objectContaining({
         request: expect.objectContaining({ workspaceStatus: 'completed' })
       })
-    )
-  })
-
-  it('passes the parent status to an SSH create', async () => {
-    const { runtime, createRemote } = makeRuntime({
-      id: 'repo-1',
-      path: '/srv/app',
-      kind: 'git',
-      executionHostId: 'ssh:remote-1'
-    })
-
-    await runtime.createManagedWorktree(request)
-
-    expect(createRemote).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ workspaceStatus: 'completed' })
     )
   })
 })
