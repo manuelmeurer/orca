@@ -8,7 +8,7 @@ import type { AppState } from '@/store/types'
 import { isTerminalLeafId, makePaneKey } from '../../../shared/stable-pane-id'
 import { resolveTerminalTitleAgentType } from '../../../shared/terminal-title-agent-type'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TerminalAgent } from '../../../shared/terminal-agent'
 import { detectAgentSendTitleStatus } from './agent-send-title-status'
 import {
   resolveRuntimePaneTitleLeafResolution,
@@ -37,6 +37,8 @@ export type NotesSendAgentTarget = {
   disabledReason?: string
 }
 
+const EMPTY_STRUCTURED_CHAT_TAB_NAMES: StructuredChatTabNames = new Map()
+
 type AgentTitleEvidence = {
   status: NonNullable<ReturnType<typeof detectAgentSendTitleStatus>>
   title: string
@@ -62,11 +64,25 @@ function detectTitleHintPaneEvidence(
 export function deriveNotesSendAgentTargets(
   state: NotesSendAgentTargetState,
   worktreeId: string,
-  chatNames: StructuredChatTabNames,
+  chatNames?: StructuredChatTabNames,
+  now?: number
+): NotesSendAgentTarget[]
+export function deriveNotesSendAgentTargets(
+  state: NotesSendAgentTargetState,
+  worktreeId: string,
+  now?: number
+): NotesSendAgentTarget[]
+export function deriveNotesSendAgentTargets(
+  state: NotesSendAgentTargetState,
+  worktreeId: string,
+  chatNamesOrNow: StructuredChatTabNames | number = EMPTY_STRUCTURED_CHAT_TAB_NAMES,
   now = Date.now()
 ): NotesSendAgentTarget[] {
+  const chatNames =
+    typeof chatNamesOrNow === 'number' ? EMPTY_STRUCTURED_CHAT_TAB_NAMES : chatNamesOrNow
+  const targetNow = typeof chatNamesOrNow === 'number' ? chatNamesOrNow : now
   const targets: NotesSendAgentTarget[] = [
-    ...deriveRunningAgentSendTargets(state, worktreeId, now),
+    ...deriveRunningAgentSendTargets(state, worktreeId, targetNow),
     ...deriveStatuslessStructuredAgentSendTargets(state, worktreeId)
   ].map((target) => {
     const tab = structuredChatTabById(state.unifiedTabsByWorktree, worktreeId, target.tabId)
@@ -118,7 +134,7 @@ function toNotesSendAgentTarget(
 function resolveForegroundAgentProcess(
   state: NotesSendAgentTargetState,
   paneKey: string
-): TuiAgent | null {
+): TerminalAgent | null {
   const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
   if (!foreground?.agent || foreground.shellForeground === true) {
     return null
