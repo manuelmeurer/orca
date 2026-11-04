@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadUpdaterModule, warmUpdaterModule } from './updater-test-module-loader'
+import { loadUpdaterModule, warmUpdaterModule } from './updater/testing/updater-test-module-loader'
 
 const {
   appMock,
@@ -9,18 +9,24 @@ const {
   fetchNewerReleaseTagsMock,
   moduleFactories,
   resetUpdaterMocks
-} = await vi.hoisted(async () => (await import('./updater-test-harness')).createUpdaterMocks())
+} = await vi.hoisted(async () =>
+  (await import('./updater/testing/updater-test-harness')).createUpdaterMocks()
+)
 
 vi.mock('electron', () => moduleFactories.electron())
 vi.mock('electron-updater', () => moduleFactories.electronUpdater())
-vi.mock('./electron-updater-loader', () => moduleFactories.electronUpdaterLoader())
+vi.mock('./updater/electron-updater-loader', () => moduleFactories.electronUpdaterLoader())
 vi.mock('./ipc/pty/kill-all', () => moduleFactories.ptyKillAll())
-vi.mock('./linux-update-package-type', () => moduleFactories.linuxUpdatePackageType())
-vi.mock('./updater-lifecycle-diagnostics', () => moduleFactories.updaterLifecycleDiagnostics())
-vi.mock('./updater-changelog', () => moduleFactories.updaterChangelog())
-vi.mock('./updater-nudge', () => moduleFactories.updaterNudge())
-vi.mock('./update-install-exit-watchdog', () => moduleFactories.updateInstallExitWatchdog())
-vi.mock('./updater-prerelease-feed', () => moduleFactories.updaterPrereleaseFeed())
+vi.mock('./updater/linux-package/linux-update-package-type', () =>
+  moduleFactories.linuxUpdatePackageType()
+)
+vi.mock('./updater/updater-lifecycle-diagnostics', () =>
+  moduleFactories.updaterLifecycleDiagnostics()
+)
+vi.mock('./updater/releases/updater-changelog', () => moduleFactories.updaterChangelog())
+vi.mock('./updater/nudges/nudge-campaign', () => moduleFactories.updaterNudge())
+vi.mock('./updater/update-install-exit-watchdog', () => moduleFactories.updateInstallExitWatchdog())
+vi.mock('./updater/releases/updater-prerelease-feed', () => moduleFactories.updaterPrereleaseFeed())
 vi.mock('./local-builds/local-build-switch', () => moduleFactories.localBuildSwitch())
 vi.mock('./local-builds/local-build-feed-server', () => moduleFactories.localBuildFeedServer())
 
