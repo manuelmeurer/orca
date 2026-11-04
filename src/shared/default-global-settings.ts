@@ -144,6 +144,7 @@ export function buildDefaultSettings(args: {
     nativeChatAutoContinueAfterUsageLimit: false,
     nativeChatInlineVisuals: true,
     nativeChatLinkPreviews: true,
+    nativeChatScrollToLatestOnSend: true,
     nativeChatInheritShellEnvironment: true,
     nativeChatShellEnvironmentVariables: [],
     nativeChatSessionOptions: {},
