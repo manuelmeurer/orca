@@ -70,9 +70,9 @@ function getOptionalStartupAgent(flags: Map<string, string | boolean>): TuiAgent
   return parseCliAgent(agent)
 }
 
-function getOptionalSetupDecision(
-  flags: Map<string, string | boolean>
-): 'run' | 'skip' | 'inherit' | undefined {
+function getSetupDecisionRequestFields(flags: Map<string, string | boolean>): {
+  setupDecision?: 'run' | 'skip' | 'inherit'
+} {
   const setup = getPresentStringFlag(flags, 'setup')
   if (setup !== undefined && setup !== 'run' && setup !== 'skip' && setup !== 'inherit') {
     throw new RuntimeClientError('invalid_argument', '--setup must be one of: run, skip, inherit')
@@ -83,7 +83,7 @@ function getOptionalSetupDecision(
       'Choose either --run-hooks or --setup run, not contradictory setup flags.'
     )
   }
-  return setup
+  return setup === undefined ? {} : { setupDecision: setup }
 }
 
 export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
@@ -140,7 +140,6 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
     const agentLaunch = startupAgent
       ? readCliAgentLaunch(flags, startupAgent, { createsWorktree: true })
       : undefined
-    const setupDecision = getOptionalSetupDecision(flags)
     const noParent = flags.get('no-parent') === true
     const inferParent = !explicitParentWorktree && !explicitParentWorkspace && !noParent
     const envParentWorkspace = inferParent ? getEnvParentWorkspace() : undefined
@@ -191,11 +190,12 @@ export const WORKTREE_HANDLERS: Record<string, CommandHandler> = {
       ...linearIssueLink,
       ...(linkedItems ? { linkedItems } : {}),
       comment: getOptionalStringFlag(flags, 'comment'),
+      workspaceStatus: getOptionalStringFlag(flags, 'workspace-status'),
       runHooks: flags.get('run-hooks') === true,
       activate,
       // CLI activation targets its runtime's desktop, never unrelated paired viewers.
       ...(activate ? { navigation: 'host' as const } : {}),
-      ...(setupDecision ? { setupDecision } : {}),
+      ...getSetupDecisionRequestFields(flags),
       parentWorktree: explicitParentWorktree,
       ...(explicitParentWorkspace ? { parentWorkspace: explicitParentWorkspace } : {}),
       ...(envParentWorkspace ? { envParentWorkspace } : {}),
