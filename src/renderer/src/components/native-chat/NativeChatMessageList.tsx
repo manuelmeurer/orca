@@ -9,8 +9,6 @@ import { useNativeChatRowTypography } from './use-native-chat-row-typography'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import { translate } from '@/i18n/i18n'
-import { useAppStore } from '@/store'
-import { nativeChatScrollsToLatestOnSend } from '../../../../shared/native-chat/native-chat-appearance-settings'
 import type { NativeChatLiveSession } from './use-native-chat-live-session'
 import { useNativeChatTranscriptProjection } from './use-native-chat-transcript-projection'
 import { desktopStructuredTranscript } from './structured-agent-session-message-projection'
@@ -54,7 +52,10 @@ import type {
 import { useNativeChatRailHistoryJump } from './use-native-chat-rail-history-jump'
 import { useNativeChatRailJumpLanding } from './use-native-chat-rail-jump-landing'
 import { useNativeChatReaderScrollInput } from './native-chat-reader-scroll-input'
-import { useNativeChatMessageListHandle } from './use-native-chat-reveal-latest'
+import {
+  useNativeChatMessageListHandle,
+  useNativeChatSendReveal
+} from './use-native-chat-reveal-latest'
 
 import type {
   AgentJournalRenderItem,
@@ -323,13 +324,15 @@ export function NativeChatMessageList({
     onScrollGesture: transcriptScroll.forwardedGesture
   })
   // Off keeps a reader who scrolled up in place; one at the end still follows the reply.
-  const revealSent = useCallback(() => {
-    if (!nativeChatScrollsToLatestOnSend(useAppStore.getState().settings) && !readerAtEnd()) {
-      return
-    }
-    jumpToLatest()
-  }, [jumpToLatest, readerAtEnd])
-  useNativeChatMessageListHandle(ref, revealSent, readerInput.revealFindMatch, dismiss, allSlots)
+  const revealSent = useNativeChatSendReveal(jumpToLatest, readerAtEnd)
+  useNativeChatMessageListHandle(
+    ref,
+    revealSent,
+    readerInput.revealFindMatch,
+    dismiss,
+    allSlots,
+    readerAtEnd
+  )
   useNativeChatRailJumpLanding({
     railJump,
     slots,
