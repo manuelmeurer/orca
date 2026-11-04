@@ -2,10 +2,13 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../../store'
-import { GeneralUpdateSettingsSection } from './GeneralUpdateSettingsSection'
+import { GeneralUpdateSettingsSection } from './updates/GeneralUpdateSettingsSection'
 
-vi.mock('./GeneralRemoteServerUpdates', () => ({ GeneralRemoteServerUpdates: () => null }))
-vi.mock('./ReleaseChannelSection', () => ({ ReleaseChannelSection: () => null }))
+vi.mock('./runtime-environments/updates/GeneralRemoteServerUpdates', () => ({
+  GeneralRemoteServerUpdates: () => null
+}))
+vi.mock('./updates/ReleaseChannelSection', () => ({ ReleaseChannelSection: () => null }))
+vi.mock('./updates/UpdateDelaySetting', () => ({ UpdateDelaySetting: () => null }))
 
 const manualUpdateInstructions =
   'Run bin/orca-custom install from the orca-custom repository. A custom build for this upstream release may not be available yet.'
