@@ -10,7 +10,7 @@ import { resolveWorktreeCreateRoute } from '../../../workspaces/creation/worktre
 import { ExecutionHostNotDispatchableError } from '../../../providers/execution-host-provider-dispatch'
 import { SshHostNotServedError } from '../../../providers/ssh-host-not-served-error'
 import { createRuntimeFolderWorktree } from './runtime-folder-worktree-create'
-import { createRuntimeLocalManagedWorktree } from './runtime-local-worktree-create'
+import { createRuntimeLocalManagedWorktree } from '../../runtime-local-worktree-create'
 import type { PreparationRearmHolder } from '../../../workspaces/creation/preparation/worktree-create-preparation'
 import { prepareRuntimeLocalWorktreeSetup } from './runtime-local-worktree-setup'
 import { invalidateAuthorizedRootsCacheForRepo } from '../../../ipc/worktrees/removal/registered-worktree-roots-scoped-invalidation'
