@@ -3,11 +3,12 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(join(__dirname, 'main.css'), 'utf8')
-const editorDir = join(__dirname, '../components/editor')
 
 function rule(selector: RegExp): string {
   const match = css.match(new RegExp(`${selector.source}\\s*\\{([^}]*)\\}`))
-  if (!match) throw new Error(`Missing CSS rule matching ${selector}`)
+  if (!match) {
+    throw new Error(`Missing CSS rule matching ${selector}`)
+  }
   return match[1]
 }
 
@@ -19,7 +20,9 @@ function tintPercent(variable: string, decoration: string): number {
       `--vscode-diffEditor-${variable}:\\s*color-mix\\(\\s*in srgb,\\s*var\\(--git-decoration-${decoration}\\) (\\d+)%`
     )
   )
-  if (!match) throw new Error(`Missing tint for ${variable}`)
+  if (!match) {
+    throw new Error(`Missing tint for ${variable}`)
+  }
   return Number(match[1])
 }
 
@@ -50,7 +53,10 @@ describe('Monaco diff contrast', () => {
     )
   })
 
-  it.each(['DiffViewer.tsx', 'DiffSectionBody.tsx'])('hides the +/- indicators in %s', (file) => {
-    expect(readFileSync(join(editorDir, file), 'utf8')).toMatch(/renderIndicators: false/)
+  it.each([
+    ['DiffViewer.tsx', '../components/editor/diff/monaco-view/DiffViewer.tsx'],
+    ['DiffSectionBody.tsx', '../components/editor/diff/sections/DiffSectionBody.tsx']
+  ])('hides the +/- indicators in %s', (_name, file) => {
+    expect(readFileSync(join(__dirname, file), 'utf8')).toMatch(/renderIndicators: false/)
   })
 })
