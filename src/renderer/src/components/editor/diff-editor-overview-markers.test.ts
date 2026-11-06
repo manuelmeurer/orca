@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const diffViewer = readFileSync(join(__dirname, 'DiffViewer.tsx'), 'utf8')
+const diffViewer = readFileSync(join(__dirname, 'diff/monaco-view/DiffViewer.tsx'), 'utf8')
 
 describe('Diff editor overview markers', () => {
   it('keeps the green/red diff overview', () => {
