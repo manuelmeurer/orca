@@ -31,8 +31,7 @@ describe('terminal first placement runtime routing', () => {
           rendererBacked: true
         },
         undefined,
-        window,
-        undefined
+        window
       )
     }
   )
