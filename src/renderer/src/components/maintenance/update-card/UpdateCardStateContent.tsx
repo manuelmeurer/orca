@@ -99,6 +99,11 @@ export function UpdateCardStateContent({
     return (
       <UpdateAvailableSimpleContent
         version={status.version}
+        releaseUrl={
+          isLocalBuild
+            ? undefined
+            : (status.releaseUrl ?? getReleaseNotesUrlForVersion(status.version))
+        }
         onUpdate={onUpdate}
         onClose={onDismiss}
         manualUpdateInstructions={status.manualUpdateInstructions}
