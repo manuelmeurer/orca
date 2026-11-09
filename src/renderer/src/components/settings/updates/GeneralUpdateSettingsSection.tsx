@@ -190,14 +190,14 @@ export function GeneralUpdateSettingsSection({
               {updateStatus.manualUpdateInstructions
                 ? `is available. ${updateStatus.manualUpdateInstructions}`
                 : updateStatus.externallyManaged
-                ? t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
-                    'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
-                  )
-                : t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
-                    'is available. Click "Download Update" to download it.'
-                  )}{' '}
+                  ? t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
+                      'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
+                    )
+                  : t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
+                      'is available. Click "Download Update" to download it.'
+                    )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
                   href={
@@ -252,9 +252,27 @@ export function GeneralUpdateSettingsSection({
               'Downloading v{{value0}}... {{value1}}%',
               { value0: updateStatus.version, value1: updateStatus.percent }
             )}
-          {updateStatus.state === 'downloaded' &&
-            updateStatus.manualUpdateInstructions &&
-            updateStatus.manualUpdateInstructions}
+          {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
+            <>
+              {updateStatus.manualUpdateInstructions}{' '}
+              {updateStatus.source !== 'local' && (
+                <a
+                  href={
+                    updateStatus.releaseUrl ?? getReleaseNotesUrlForVersion(updateStatus.version)
+                  }
+                  target="_blank"
+                  onClick={openAppHttpLinkFromAnchor}
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground"
+                >
+                  {t(
+                    'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
+                    'Release notes'
+                  )}
+                </a>
+              )}
+            </>
+          )}
           {updateStatus.state === 'downloaded' && !updateStatus.manualUpdateInstructions && (
             <>
               {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
