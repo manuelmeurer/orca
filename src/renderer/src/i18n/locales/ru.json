@@ -20408,6 +20408,8 @@
         "showAgent": "Показать {{value0}} в разговоре"
       },
       "jumpToLatest": "К последним сообщениям",
+      "newRowsAnnouncement": "Пока вас не было, появились новые сообщения",
+      "newRowsMarker": "Новое",
       "find": {
         "label": "Найти в чате",
         "noResults": "Ничего не найдено",

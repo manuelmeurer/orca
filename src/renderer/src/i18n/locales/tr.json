@@ -19741,6 +19741,8 @@
         "showAgent": "{{value0}} öğesini konuşmada göster"
       },
       "jumpToLatest": "En son öğeye git",
+      "newRowsAnnouncement": "Siz yokken yeni mesajlar geldi",
+      "newRowsMarker": "Yeni",
       "find": {
         "label": "Sohbette bul",
         "noResults": "Sonuç yok",
