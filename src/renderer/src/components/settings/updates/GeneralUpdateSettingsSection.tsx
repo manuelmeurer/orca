@@ -302,6 +302,27 @@ export function GeneralUpdateSettingsSection({
               'Downloading version {{version}} ({{percent}}%)…',
               { version: updateStatus.version, percent: updateStatus.percent }
             )}
+          {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
+            <>
+              {updateStatus.manualUpdateInstructions}{' '}
+              {updateStatus.source !== 'local' && (
+                <a
+                  href={
+                    updateStatus.releaseUrl ?? getReleaseNotesUrlForVersion(updateStatus.version)
+                  }
+                  target="_blank"
+                  onClick={openAppHttpLinkFromAnchor}
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground"
+                >
+                  {t(
+                    'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
+                    'Release notes'
+                  )}
+                </a>
+              )}
+            </>
+          )}
           {updateStatus.state === 'downloaded' &&
             !showManualRestart &&
             !updateStatus.manualUpdateInstructions && (
