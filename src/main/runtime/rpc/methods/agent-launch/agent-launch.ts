@@ -89,7 +89,13 @@ async function runAgentLaunch(
       }
       view.early?.surfacePublished(surface)
       replaySafe?.recordSurface(withPlacement(surface, view))
-      await selectLaunchedTab(context, surface, view.presentation, callerNavigationId)
+      await selectLaunchedTab(
+        context,
+        surface,
+        view.presentation,
+        callerNavigationId,
+        intent.target
+      )
     }
   })
   return withPlacement(result, view)
