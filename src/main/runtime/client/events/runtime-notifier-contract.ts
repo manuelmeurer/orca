@@ -10,6 +10,7 @@ import type { AgentLaunchPaneVerdictEvent } from '../../../../shared/agent-launc
 import type { SleepingAgentLaunchConfig } from '../../../../shared/agent-session/lifecycle/agent-session-resume'
 import type { PaneLaunchRecipe } from '../../../../shared/terminal/pty/lifecycle/terminal-attachment-launch-result'
 import type {
+  AgentLaunchChatFocus,
   AgentLaunchTabPublished,
   AgentLaunchTabViewerRule,
   AgentLaunchTabPublishRequest
@@ -116,6 +117,8 @@ export type RuntimeNotifier = {
   publishAgentLaunchTab?(
     request: Omit<AgentLaunchTabPublishRequest, 'requestId'>
   ): Promise<AgentLaunchTabPublished>
+  /** A focused launch's chat, for the window to select once its tab is listed. */
+  focusAgentLaunchChat?(focus: AgentLaunchChatFocus): void
   /** A launch pane's fate, for the window to keep on its tab or act on. */
   agentLaunchPaneVerdict?(event: AgentLaunchPaneVerdictEvent): void
   /** A launch's recipe when no reveal carried it, so resume can replay it. */

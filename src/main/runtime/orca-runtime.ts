@@ -70,7 +70,6 @@ import {
   PeerMailRelay,
   type PeerServerAnswerStatus
 } from './orchestration/federation/peer-mail/peer-mail-relay'
-import { structuredAgentSessionHostTabId } from '../../shared/agent-session/view/structured-agent-session-host-tab-id'
 import { runtimeBotChatTreeIndex } from '../bots/bot-chat-tree-host'
 
 const OrcaRuntimeSidebarBase: typeof OrcaRuntimeWithAgentTransitions = ORCA_SIDEBAR_INPUTS_IS_MAIN
@@ -240,13 +239,6 @@ class OrcaRuntimeService extends OrcaRuntimeSidebarBase {
       return null
     }
     return this.notifier.publishAgentLaunchTab(request)
-  }
-
-  /** The window follows a listed active chat only on its own intent (#5435), so a focused launch names it. */
-  focusLaunchedChatInHostWindow(worktreeId: string, sessionId: string): void {
-    this.notifier?.focusEditorTab?.(structuredAgentSessionHostTabId(sessionId), worktreeId, {
-      userInitiated: true
-    })
   }
 
   /** Retain final verdicts, clear settled ones, and remove withdrawn panes without removing split siblings. */

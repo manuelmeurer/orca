@@ -32,6 +32,7 @@ import { parseAppSshPtyId } from '../../../../shared/remote-runtime/ssh/ssh-pty-
 import type { TerminalProcessInspection as PtyProcessInspection } from '../../../../shared/terminal/pty/lifecycle/terminal-process-inspection'
 import type { MainSessionTabRows } from '../layout/main-session-tab-rows'
 import { isReopenedChatTabId } from '../../../../shared/agent-session/view/structured-agent-session-host-tab-id'
+import type { AgentLaunchChatFocus } from '../../../../shared/agent-launch/contracts/agent-launch-tab-publication'
 
 export type AgentLaunchScope = Parameters<
   OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce['getAgentLaunchPlatformForWorkspace']
@@ -164,6 +165,11 @@ export abstract class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce exten
             : [{ worktreeId: input.workspaceId, tabId }]
       }
     })
+  }
+
+  /** The window follows a listed active tab only on its own intent, so a focused launch names its chat. */
+  focusAgentLaunchChatInHostWindow(focus: AgentLaunchChatFocus): void {
+    this.notifier?.focusAgentLaunchChat?.(focus)
   }
 
   /** The caller owns the store write; this publishes only its current raw surface. */
