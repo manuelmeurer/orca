@@ -11,12 +11,7 @@ import type { BrowserTabCreateRequest } from '../../../shared/browser/workspaces
 import type { MarkdownDocument } from '../../../shared/file-listing/file-document'
 import type { PersistedUIState } from '../../../shared/orca-profiles/persisted-ui-state-types'
 import type { TuiAgent } from '../../../shared/agent-launch/catalog/tui-agent'
-import type {
-  AgentLaunchTabPublishReply,
-  AgentLaunchTabViewerRule,
-  AgentLaunchTabPublishRequest
-} from '../../../shared/agent-launch/contracts/agent-launch-tab-publication'
-import type { AgentLaunchPaneVerdictEvent } from '../../../shared/agent-launch/contracts/agent-launch-pane-verdict'
+import type { AgentLaunchTabViewerRule } from '../../../shared/agent-launch/contracts/agent-launch-tab-publication'
 import type { PaneLaunchRecipe } from '../../../shared/terminal/pty/lifecycle/terminal-attachment-launch-result'
 import type {
   TerminalPaneMoveToNewTabReply,
@@ -222,9 +217,6 @@ export type UiCommandEventApi = {
     callback: (data: { worktreeId: string; tabId?: string; ptyId?: string }) => void
   ) => () => void
   replyTerminalCreate: (reply: TerminalTabCreateReply) => void
-  onPublishAgentLaunchTab: (callback: (data: AgentLaunchTabPublishRequest) => void) => () => void
-  replyAgentLaunchTabPublish: (reply: AgentLaunchTabPublishReply) => void
-  onAgentLaunchPaneVerdict: (callback: (data: AgentLaunchPaneVerdictEvent) => void) => () => void
   onLaunchRecipe: (callback: (data: PaneLaunchRecipe) => void) => () => void
   onRevealTerminalPane: (callback: (data: TerminalPaneRevealRequest) => void) => () => void
   replyTerminalPaneReveal: (reply: TerminalPaneRevealReply) => void
