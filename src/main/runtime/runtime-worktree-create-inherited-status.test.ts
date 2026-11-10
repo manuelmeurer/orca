@@ -12,7 +12,7 @@ vi.mock('./runtime-local-worktree-create', () => ({
   createRuntimeLocalManagedWorktree: createRuntimeLocalManagedWorktreeMock
 }))
 
-import type { FolderWorkspace } from '../../shared/folder-workspace-types'
+import type { FolderWorkspace } from '../../shared/folder-workspaces/folder-workspace-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { WorkspaceStatus } from '../../shared/worktree/types'
 import { mergeWorktree } from '../ipc/worktree-metadata-merge'
