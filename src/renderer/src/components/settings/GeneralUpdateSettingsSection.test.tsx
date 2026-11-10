@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../../store'
 import { GeneralUpdateSettingsSection } from './updates/GeneralUpdateSettingsSection'
 
-vi.mock('./runtime-environments/updates/GeneralRemoteServerUpdates', () => ({
+vi.mock('./updates/GeneralRemoteServerUpdates', () => ({
   GeneralRemoteServerUpdates: () => null
 }))
 vi.mock('./updates/ReleaseChannelSection', () => ({ ReleaseChannelSection: () => null }))
