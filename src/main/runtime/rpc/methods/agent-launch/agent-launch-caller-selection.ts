@@ -61,7 +61,8 @@ export async function selectLaunchedTab(
   context: Pick<RpcContext, 'runtime' | 'caller' | 'clientKind'>,
   surface: AgentLaunchPublishedSurface,
   presentation: AgentLaunchParams['presentation'],
-  callerNavigationId: string | null
+  callerNavigationId: string | null,
+  target: AgentLaunchTarget
 ): Promise<void> {
   if (callerNavigationId !== null) {
     if (presentation !== 'background') {
@@ -69,12 +70,22 @@ export async function selectLaunchedTab(
     }
     return
   }
-  // A terminal's reveal selects its own tab; a chat's listing alone never moves the window (#5435).
+  // A terminal's reveal selects its own tab; the window follows a listed chat only on its own intent.
   if (
-    surface.outcome.kind === 'structured' &&
-    agentLaunchTabViewerRule(context, presentation) === 'focus-window'
+    surface.outcome.kind !== 'structured' ||
+    agentLaunchTabViewerRule(context, presentation) !== 'focus-window'
   ) {
-    context.runtime.focusLaunchedChatInHostWindow(surface.worktreeId, surface.outcome.sessionId)
+    return
+  }
+  try {
+    context.runtime.focusAgentLaunchChatInHostWindow({
+      worktreeId: surface.worktreeId,
+      sessionId: surface.outcome.sessionId,
+      // A created workspace is shown by its own activation.
+      revealWorkspace: target.kind === 'existing'
+    })
+  } catch (error) {
+    console.warn('[agent-launch] the chat started; selecting its tab in the window did not', error)
   }
 }
 
