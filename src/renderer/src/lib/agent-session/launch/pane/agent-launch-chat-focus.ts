@@ -2,7 +2,7 @@ import type { AgentLaunchChatFocus } from '../../../../../../shared/agent-launch
 import { LOCAL_STRUCTURED_SESSION_OWNER } from '@/runtime/native-chat/local-sessions/local-structured-session-owner'
 import { recordWebSessionFocusIntent } from '@/runtime/web-session-tabs-sync/navigation/web-session-focus-intent'
 import { useAppStore } from '../../../../store/index'
-import { revealWorkspaceSurface } from '../../../workspace/activation/workspace-surface-reveal'
+import { revealWorkspaceSurface } from '../../../workspace-surface-reveal'
 import { findStructuredAgentSessionTab } from '../../structured-agent-session-tab-activation'
 
 /** Selects a focused host launch's chat, or has its tab selected when the host's listing brings it. */
