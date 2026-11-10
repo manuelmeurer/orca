@@ -42,7 +42,7 @@ import {
 import {
   agentLaunchCallerNavigationId,
   callerRendersLaunchedChat,
-  selectLaunchedTab
+  presentAgentLaunchSurface
 } from './agent-launch-caller-selection'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
 import {
@@ -89,7 +89,7 @@ async function runAgentLaunch(
       }
       view.early?.surfacePublished(surface)
       replaySafe?.recordSurface(withPlacement(surface, view))
-      selectLaunchedTab(context, surface, view.presentation, callerNavigationId)
+      presentAgentLaunchSurface(context, surface, view.presentation, intent.target)
     }
   })
   return withPlacement(result, view)

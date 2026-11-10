@@ -78,13 +78,49 @@ describe('a replayed launch', () => {
   })
 })
 
-describe('a focused chat launch from the local CLI', () => {
-  it('asks the host window to select the chat', async () => {
-    const runtime = Object.assign(runtimeStub({}), { focusLaunchedChatInHostWindow: vi.fn() })
-    const params = AGENT_LAUNCH.params.parse({ ...EXISTING_LAUNCH, presentation: 'focused' })
+describe('a focused launch from the CLI', () => {
+  const CREATE_LAUNCH = {
+    agent: 'claude',
+    target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
+  }
 
-    await AGENT_LAUNCH.handler(params, rpcContext(runtime, {}))
+  async function launchFromCli(
+    params: Record<string, unknown>,
+    settings?: Record<string, unknown>
+  ) {
+    const runtime = Object.assign(runtimeStub(settings ? { settings } : {}), {
+      focusAgentLaunchChatInHostWindow: vi.fn()
+    })
+    await AGENT_LAUNCH.handler(AGENT_LAUNCH.params.parse(params), rpcContext(runtime, {}))
+    return runtime.focusAgentLaunchChatInHostWindow
+  }
 
-    expect(runtime.focusLaunchedChatInHostWindow).toHaveBeenCalledWith('wt-7', 'sess-1')
+  it('has the window select the chat and show its existing workspace', async () => {
+    const focus = await launchFromCli({ ...EXISTING_LAUNCH, presentation: 'focused' })
+
+    expect(focus).toHaveBeenCalledExactlyOnceWith({
+      worktreeId: 'wt-7',
+      sessionId: 'sess-1',
+      revealWorkspace: true
+    })
+  })
+
+  it('leaves showing a created workspace to its activation', async () => {
+    const focus = await launchFromCli({ ...CREATE_LAUNCH, presentation: 'focused' })
+
+    expect(focus).toHaveBeenCalledExactlyOnceWith({
+      worktreeId: 'wt-new',
+      sessionId: 'sess-1',
+      revealWorkspace: false
+    })
+  })
+
+  it.each([
+    ['a background chat', { ...EXISTING_LAUNCH, presentation: 'background' }, undefined],
+    ['a focused terminal', { ...EXISTING_LAUNCH, presentation: 'focused' }, {}]
+  ])('leaves %s to its own presentation', async (_name, params, settings) => {
+    const focus = await launchFromCli(params, settings)
+
+    expect(focus).not.toHaveBeenCalled()
   })
 })
