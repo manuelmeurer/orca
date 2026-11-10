@@ -25,6 +25,7 @@ import {
   resolveAgentLaunchRuntime,
   resolveStartupAgentLaunchRuntime
 } from '../../terminal/launch/agent-launch-scope-runtime'
+import type { AgentLaunchChatFocus } from '../../../../shared/agent-launch/contracts/agent-launch-tab-publication'
 import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import type { AgentLaunchRuntime } from '../../../../shared/agent-launch/startup/agent-launch-runtime'
 import type { TerminalWorkspaceLaunchScope } from '../../orchestration/terminal-authority/structured-sessions/runtime-legacy-worker-terminal-recovery-types'
@@ -164,6 +165,11 @@ export abstract class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce exten
             : [{ worktreeId: input.workspaceId, tabId }]
       }
     })
+  }
+
+  /** The window follows a listed active tab only on its own intent, so a focused launch names its chat. */
+  focusAgentLaunchChatInHostWindow(focus: AgentLaunchChatFocus): void {
+    this.notifier?.focusAgentLaunchChat?.(focus)
   }
 
   /** The caller owns the store write; this publishes only its current raw surface. */

@@ -77,6 +77,7 @@ import type {
   TelemetryApi
 } from './api/diagnostics/telemetry-api'
 import type { UiCommandEventApi } from './api/window-ui/ui-command-event-api'
+import type { UiAgentLaunchEventApi } from './api/ui-agent-launch-event-api'
 import type { UiWindowApi } from './api/window-ui/ui-window-api'
 import type { BotLinkEventApi } from './api/bot-link-event-api'
 import type { UpdaterApi } from './api/updater/updater-api'
@@ -173,7 +174,7 @@ export type PreloadApi = {
   nativeChat: NativeChatApi
   fs: FilesystemApi['fs']
   git: Merged<GitInspectionApi & GitOperationApi>
-  ui: Merged<UiCommandEventApi & UiWindowApi & BotLinkEventApi>
+  ui: Merged<UiCommandEventApi & UiAgentLaunchEventApi & UiWindowApi & BotLinkEventApi>
   runtime: RuntimeApi['runtime']
   runtimeEnvironments: RuntimeApi['runtimeEnvironments']
   rateLimits: RateLimitsApi

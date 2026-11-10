@@ -7,6 +7,7 @@ import type { TerminalPaneSplitSource } from '../../../shared/feature-education/
 import type { RendererTerminalSplitRequest } from '../../../shared/workspace-layout/terminal-topology/renderer-terminal-split-request'
 import type { TerminalTabCreateReply } from '../../../shared/workspace-layout/terminal-surfaces/terminal-reveal-identity'
 import type {
+  AgentLaunchChatFocus,
   AgentLaunchTabPublishReply,
   AgentLaunchTabViewerRule,
   AgentLaunchTabPublishRequest
@@ -143,6 +144,12 @@ export const uiTerminalAndSessionTabsApi = {
       callback(data)
     ipcRenderer.on('ui:agentLaunchPaneVerdict', listener)
     return () => ipcRenderer.removeListener('ui:agentLaunchPaneVerdict', listener)
+  },
+  onFocusAgentLaunchChat: (callback: (data: AgentLaunchChatFocus) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: AgentLaunchChatFocus) =>
+      callback(data)
+    ipcRenderer.on('ui:focusAgentLaunchChat', listener)
+    return () => ipcRenderer.removeListener('ui:focusAgentLaunchChat', listener)
   },
   onLaunchRecipe: (callback: (data: PaneLaunchRecipe) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: PaneLaunchRecipe) => callback(data)
