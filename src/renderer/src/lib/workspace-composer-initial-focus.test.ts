@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from 'vitest'
-import { getWorkspaceComposerInitialFocusTarget } from './workspace-composer-initial-focus'
+import { getWorkspaceComposerInitialFocusTarget } from './workspace/creation/workspace-composer-initial-focus'
 
 describe('getWorkspaceComposerInitialFocusTarget', () => {
   it('focuses the project combobox when both name and project triggers exist', () => {
