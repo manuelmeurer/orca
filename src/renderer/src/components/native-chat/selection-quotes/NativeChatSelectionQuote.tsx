@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import { flushSync } from 'react-dom'
 import { useAppStore } from '../../../store/index'
 import type { NativeChatComposerHandle } from '../composer/native-chat-composer-types'
 import {
@@ -37,6 +38,15 @@ export function NativeChatSelectionQuote({
       }
       onSelectionSettled={copyTranscriptSelectionOnSelect}
       onAdd={(text) => composerRef.current?.appendText(formatNativeChatQuote(text))}
+      onReply={(text, reply) => {
+        const composer = composerRef.current
+        if (!composer?.submit) {
+          return
+        }
+        // Rendered first: Send reads the draft the composer last rendered, as Enter does.
+        flushSync(() => composer.appendText(`${formatNativeChatQuote(text)}${reply}`))
+        composer.submit()
+      }}
     />
   )
 }

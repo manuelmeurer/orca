@@ -1,12 +1,21 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type RefObject } from 'react'
-import { Quote } from 'lucide-react'
+import { flushSync } from 'react-dom'
+import { Quote, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { addViewportSizeChangeListener } from '@/lib/window-activity/viewport-size-change-listener'
 import { useTranslate } from '@/i18n/use-translate'
 
 // Why: shown at once, a double-click's action would sit under the pointer and take the third click.
 const DOUBLE_CLICK_SETTLE_MS = 500
+
+const REPLIES = [
+  { reply: 'yes', Icon: ThumbsUp },
+  { reply: 'no', Icon: ThumbsDown }
+] as const
+
+export type SelectionReply = (typeof REPLIES)[number]['reply']
 
 type QuoteRequest = {
   text: string
@@ -21,7 +30,8 @@ export function SelectionAddToChatPopover({
   enabled,
   readQuotable,
   onSelectionSettled,
-  onAdd
+  onAdd,
+  onReply
 }: {
   rootRef: RefObject<HTMLElement | null>
   enabled: boolean
@@ -30,8 +40,14 @@ export function SelectionAddToChatPopover({
   onSelectionSettled?: (root: HTMLElement) => void
   /** `button` is where the offer was clicked, for a surface that opens a menu from it. */
   onAdd: (text: string, button: DOMRect) => void
+  /** Offers one-click yes/no replies beside "Add to chat"; absent on surfaces that cannot send. */
+  onReply?: (text: string, reply: SelectionReply) => void
 }): React.JSX.Element {
   const t = useTranslate()
+  const replyLabels: Record<SelectionReply, string> = {
+    yes: t('components.native-chat.replyYesToSelection', 'Reply yes'),
+    no: t('components.native-chat.replyNoToSelection', 'Reply no')
+  }
   const [request, setRequest] = useState<QuoteRequest | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const virtualRef = useMemo(() => ({ current: request?.anchor ?? null }), [request])
@@ -146,7 +162,7 @@ export function SelectionAddToChatPopover({
           // Never takes focus itself, so it must not keep the composer from taking it.
           data-focus-behavior="page"
         >
-          <div className="p-0.5">
+          <div className="flex items-center gap-0.5 p-0.5">
             <Button
               variant="ghost"
               size="xs"
@@ -159,6 +175,28 @@ export function SelectionAddToChatPopover({
               <Quote />
               {t('components.native-chat.addSelectionToChat', 'Add to chat')}
             </Button>
+            {onReply
+              ? REPLIES.map(({ reply, Icon }) => (
+                  <Tooltip key={reply}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={replyLabels[reply]}
+                        onClick={() => {
+                          flushSync(() => setRequest(null))
+                          onReply(request.text, reply)
+                        }}
+                      >
+                        <Icon />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={4}>
+                      {replyLabels[reply]}
+                    </TooltipContent>
+                  </Tooltip>
+                ))
+              : null}
           </div>
         </PopoverContent>
       ) : null}
