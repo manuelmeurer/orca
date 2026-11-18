@@ -165,6 +165,7 @@ export function UpdateCardStateContent({
     <UpdateAvailableRichContent
       release={changelog.release}
       releasesBehind={changelog.releasesBehind}
+      releaseHistory={status.releaseHistory}
       prefersReducedMotion={prefersReducedMotion}
       mediaFailed={mediaFailed}
       mediaLoaded={mediaLoaded}
@@ -178,6 +179,7 @@ export function UpdateCardStateContent({
     <UpdateAvailableSimpleContent
       version={status.version}
       releaseUrl={releaseUrl}
+      releaseHistory={status.releaseHistory}
       onUpdate={onUpdate}
       onClose={onDismiss}
       externallyManaged={status.externallyManaged}
