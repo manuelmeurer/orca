@@ -17,16 +17,13 @@ vi.mock('./updates/UpdateDelaySetting', () => ({
   )
 }))
 
-const manualUpdateInstructions =
-  'Run bin/orca-custom install from the orca-custom repository. A custom build for this upstream release may not be available yet.'
-
 beforeEach(() => {
   useAppStore.setState({
     updateStatus: {
       state: 'available',
       version: '1.4.208',
       changelog: null,
-      manualUpdateInstructions
+      manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS
     }
   })
   Object.defineProperty(window, 'api', {
@@ -43,7 +40,7 @@ afterEach(() => {
 it('shows custom installer instructions and release notes without update actions', async () => {
   render(<GeneralUpdateSettingsSection />)
 
-  expect(screen.getByText(/Run bin\/orca-custom install/)).toBeTruthy()
+  expect(screen.getByText(/Install with bin\/orca-custom install/)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Download update|Restart to update/i })).toBeNull()
   expect(screen.getByRole('link', { name: 'Release notes' })).toBeTruthy()
   expect((await screen.findByTestId('update-delay-setting')).getAttribute('data-recheck')).toBe(

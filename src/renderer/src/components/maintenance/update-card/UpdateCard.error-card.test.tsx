@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, type RenderResult } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UpdateStatus } from '../../../../../shared/updater/update-status-types'
+import { CUSTOM_UPDATE_INSTRUCTIONS } from '../../../../../shared/custom-update-policy'
 import { useAppStore } from '../../../store/index'
 import { UpdateCard } from './UpdateCard'
 import { NotificationCardStack } from '../../notifications/NotificationCardStack'
@@ -149,11 +150,42 @@ it('offers only manual instructions for a custom build update', () => {
     state: 'available',
     version: '1.4.208',
     changelog: null,
-    manualUpdateInstructions: 'Run bin/orca-custom install from the orca-custom repository.'
+    manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS
   })
   expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
-  expect(screen.getByText(/Run bin\/orca-custom install/)).toBeTruthy()
+  expect(screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Release notes' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Dismiss update' })).toBeTruthy()
+})
+
+it('pages through release notes above the install line for a custom build update', () => {
+  renderWithInitialStatus({
+    state: 'available',
+    version: '1.4.264',
+    changelog: null,
+    manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS,
+    releaseHistory: {
+      installedVersion: '1.4.263+custom.1',
+      newerReleaseCount: 1,
+      releases: [
+        {
+          version: '1.4.264',
+          publishedAt: '2026-11-20T10:00:00Z',
+          notes: 'Faster startup',
+          releaseUrl: 'https://github.com/stablyai/orca/releases/tag/v1.4.264'
+        }
+      ]
+    }
+  })
+  expect(screen.getByText(/v1\.4\.263\+custom\.1 · 1 new release/)).toBeTruthy()
+  expect(screen.getByText('Faster startup')).toBeTruthy()
+  const pagerLink = screen.getByRole('button', { name: 'View on GitHub' })
+  const instructions = screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)
+  expect(
+    pagerLink.compareDocumentPosition(instructions) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Release notes' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Dismiss update' })).toBeTruthy()
 })
 
@@ -163,7 +195,7 @@ it('hides the rich update action for custom builds', () => {
       state: 'available',
       version: '1.4.208',
       changelog: null,
-      manualUpdateInstructions: 'Run bin/orca-custom install.'
+      manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS
     },
     updateChangelog: {
       release: {
@@ -183,7 +215,7 @@ it('hides the rich update action for custom builds', () => {
     </NotificationCardStack>
   )
   expect(screen.getByText('New: New release')).toBeTruthy()
-  expect(screen.getByText('Run bin/orca-custom install.')).toBeTruthy()
+  expect(screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Read the full release notes' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Dismiss update' })).toBeTruthy()
@@ -194,9 +226,9 @@ it('does not offer restart for a custom build with a downloaded status', () => {
   renderWithInitialStatus({
     state: 'downloaded',
     version: '1.4.208',
-    manualUpdateInstructions: 'Run bin/orca-custom install.'
+    manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS
   })
-  expect(screen.getByText('Run bin/orca-custom install.')).toBeTruthy()
+  expect(screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Restart|Install|^Update$/ })).toBeNull()
   expect(quitAndInstall).not.toHaveBeenCalled()
 })
