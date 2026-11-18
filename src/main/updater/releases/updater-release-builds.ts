@@ -166,6 +166,39 @@ function parseReleaseEntry(
   }
 }
 
+export const RELEASES_PER_PAGE = MAX_LISTED_BUILDS
+
+/** One page of GitHub releases using the updater's auth and rate-limit policy. */
+export async function fetchReleaseListPage(
+  repo: string,
+  page: number | ReleasePage = 1,
+  budget?: AbortSignal
+): Promise<{ res: Response; signedIn: boolean }> {
+  const releasePage = typeof page === 'number' ? { perPage: RELEASES_PER_PAGE, page } : page
+  // Skip a known-exhausted token bucket and try the separate per-IP quota.
+  const credential = await resolveReleaseApiToken()
+  const tokenBucketBlocked =
+    credential !== null &&
+    getGhRateLimitBlockedUntilMs('core', Date.now(), credential.rateLimitScope) !== null
+  const token = tokenBucketBlocked ? null : (credential?.token ?? null)
+  let signedIn = credential !== null
+  let res = await fetchReleases(repo, token, releasePage, budget)
+  if (token && res.status === 401) {
+    // A rejected token must not prevent listing a public repo unauthenticated.
+    rejectReleaseApiToken()
+    signedIn = false
+    res = await fetchReleases(repo, null, releasePage, budget)
+  } else if (token && isRateLimited(res) && isPrimaryRateLimited(res)) {
+    // The per-IP quota may still be available; mark the token bucket spent before retrying.
+    const resetAtMs = rateLimitResetAtMs(res.headers, Date.now())
+    if (resetAtMs !== null && credential) {
+      recordGhPrimaryRateLimit('core', resetAtMs, credential.rateLimitScope)
+    }
+    res = await fetchReleases(repo, null, releasePage, budget)
+  }
+  return { res, signedIn }
+}
+
 // REST exposes older builds the short Atom feed omits; use only for explicit picker requests and update-delay gaps.
 async function fetchReleaseBuildsPage(
   channel: ReleaseChannel,
@@ -174,27 +207,7 @@ async function fetchReleaseBuildsPage(
   budget?: AbortSignal
 ): Promise<{ builds: ReleaseBuild[]; isLastPage: boolean }> {
   const repo = getReleaseRepoForChannel(channel)
-  // Skip a known-exhausted token bucket and try the separate per-IP quota.
-  const credential = await resolveReleaseApiToken()
-  const tokenBucketBlocked =
-    credential !== null &&
-    getGhRateLimitBlockedUntilMs('core', Date.now(), credential.rateLimitScope) !== null
-  const token = tokenBucketBlocked ? null : (credential?.token ?? null)
-  let signedIn = credential !== null
-  let res = await fetchReleases(repo, token, page, budget)
-  if (token && res.status === 401) {
-    // A rejected token must not prevent listing a public repo unauthenticated.
-    rejectReleaseApiToken()
-    signedIn = false
-    res = await fetchReleases(repo, null, page, budget)
-  } else if (token && isRateLimited(res) && isPrimaryRateLimited(res)) {
-    // The per-IP quota may still be available; mark the token bucket spent before retrying.
-    const resetAtMs = rateLimitResetAtMs(res.headers, Date.now())
-    if (resetAtMs !== null && credential) {
-      recordGhPrimaryRateLimit('core', resetAtMs, credential.rateLimitScope)
-    }
-    res = await fetchReleases(repo, null, page, budget)
-  }
+  const { res, signedIn } = await fetchReleaseListPage(repo, page, budget)
   if (!res.ok) {
     throw releaseListError(res, repo, channel, signedIn)
   }
