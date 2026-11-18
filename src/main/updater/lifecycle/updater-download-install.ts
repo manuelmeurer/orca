@@ -27,6 +27,7 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     isCurrentTeamRestart?: () => boolean
   ): void {
     if (isCustomBuild(app.getVersion())) {
+      this.sendToMainWindow('updater:quitAndInstallAborted')
       this.sendStatus({
         state: 'error',
         message: CUSTOM_UPDATE_INSTRUCTIONS,
