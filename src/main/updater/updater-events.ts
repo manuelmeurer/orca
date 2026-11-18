@@ -130,19 +130,18 @@ export function registerAutoUpdaterHandlers({
       return
     }
 
-    // A transiently older offer must not discard the retained recovery package.
     linuxPackageRecovery.clearTrackedLinuxPackageArtifactForOtherVersion(info.version)
 
     markUpdateAvailableEventPending(attemptId)
     void (async () => {
       try {
         const releaseCheck = !isLocalBuildCheck() && !isPinnedBuildCheck()
-        const [changelog, releaseHistory] = releaseCheck
-          ? await Promise.all([
-              fetchChangelog(info.version, app.getVersion()).catch(() => null),
-              fetchReleaseHistory(info.version, app.getVersion())
-            ])
-          : [null, null]
+        const releaseHistory = releaseCheck
+          ? fetchReleaseHistory(info.version, app.getVersion())
+          : null
+        const changelog = releaseCheck
+          ? await fetchChangelog(info.version, app.getVersion()).catch(() => null)
+          : null
 
         if (!isActiveUpdateCheckAttempt(attemptId)) {
           return
@@ -151,11 +150,10 @@ export function registerAutoUpdaterHandlers({
           return
         }
 
-        // A concurrent error during the fetch must not leave stale available state.
         setAvailableVersion(info.version)
         setAvailableReleaseUrl(null)
         // Dev jumps must not suppress real background checks by persisting lastUpdateCheckAt.
-        if (!isLocalBuildCheck() && !isPinnedBuildCheck()) {
+        if (releaseCheck) {
           if (missingManifestFallback || publishingWindowLastGoodCheck) {
             // Keep probing until the newest release finishes publishing.
             scheduleAutomaticUpdateCheck(AUTO_UPDATE_RETRY_INTERVAL_MS)
@@ -172,19 +170,26 @@ export function registerAutoUpdaterHandlers({
             state: 'available',
             version: info.version,
             changelog,
-            ...(releaseHistory ? { releaseHistory } : {}),
             // Tell clients this host cannot self-update before offering a download.
             ...(isExternallyManagedLinuxInstall() ? { externallyManaged: true } : {})
           },
           {
-            eligible:
-              !isLocalBuildCheck() &&
-              !isPinnedBuildCheck() &&
-              !missingManifestFallback &&
-              !publishingWindowLastGoodCheck,
+            eligible: releaseCheck && !missingManifestFallback && !publishingWindowLastGoodCheck,
             backgroundCheck: !wasUserInitiated && !getUserInitiatedCheck()
           }
         )
+        void releaseHistory?.then((history) => {
+          const status = getCurrentStatus()
+          // Attach only while this offer is still shown and no newer check could be cut short.
+          if (
+            history &&
+            status.state === 'available' &&
+            status.version === info.version &&
+            getActiveUpdateCheckEventAttemptId() === null
+          ) {
+            sendStatus({ ...status, releaseHistory: history })
+          }
+        })
       } finally {
         clearUpdateAvailableEventPending(attemptId)
       }
