@@ -19,6 +19,7 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
 
   protected quitAndInstall(automatic = false): void {
     if (isCustomBuild(app.getVersion())) {
+      this.sendToMainWindow('updater:quitAndInstallAborted')
       this.sendStatus({
         state: 'error',
         message: CUSTOM_UPDATE_INSTRUCTIONS,
