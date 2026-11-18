@@ -4,6 +4,10 @@ import type {
   RemoteServerUpdateEntry,
   RemoteServerUpdatePhase
 } from '@/runtime/hosts/updates/remote-server-update-coordinator'
+import {
+  CUSTOM_UPDATE_INSTRUCTIONS,
+  isCustomBuild
+} from '../../../../../../shared/custom-update-policy'
 import { Badge } from '@/components/ui/badge'
 import { translate } from '@/i18n/i18n'
 import { useTranslate, type Translate } from '@/i18n/use-translate'
@@ -92,6 +96,9 @@ export function getRemoteServerManualUpdateHelp(
   entry: RemoteServerUpdateEntry,
   t: Translate = translate
 ): string {
+  if (isCustomBuild(entry.currentVersion ?? '')) {
+    return CUSTOM_UPDATE_INSTRUCTIONS
+  }
   if (entry.managedOverSsh) {
     return t(
       'auto.components.settings.RemoteServerUpdateStatus.managedOverSshHelp',

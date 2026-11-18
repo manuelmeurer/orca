@@ -43,6 +43,9 @@ export type UpdaterSetupOptions = {
 
 export class UpdaterSetup extends UpdaterDownloadInstall {
   checkForUpdates(): void {
+    if (isCustomBuild(app.getVersion())) {
+      return
+    }
     this.checkForUpdatesInBackground()
   }
 
