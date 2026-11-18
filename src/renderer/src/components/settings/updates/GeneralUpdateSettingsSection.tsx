@@ -173,7 +173,8 @@ export function GeneralUpdateSettingsSection({
 
         <p className="text-xs text-muted-foreground">
           {updateStatus.state === 'idle' &&
-            (isCustomBuild(appVersion ?? '')
+            appVersion !== null &&
+            (isCustomBuild(appVersion)
               ? 'Automatic update checks are disabled for custom builds.'
               : t(
                   'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
@@ -321,7 +322,9 @@ export function GeneralUpdateSettingsSection({
           <UpdateReleaseHistoryPager history={updateStatus.releaseHistory} />
         )}
       </SearchableSetting>
-      <UpdateDelaySetting />
+      <UpdateDelaySetting
+        recheckOnDelayChange={appVersion !== null && !isCustomBuild(appVersion)}
+      />
       {channelSwitcherRevealed && !isCustomBuild(appVersion ?? '') ? (
         <ReleaseChannelSection />
       ) : null}

@@ -24,6 +24,13 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
         reason: 'unpackaged-build'
       }
     }
+    if (isCustomBuild(app.getVersion())) {
+      return {
+        installMode: this.updateInstallMode,
+        automatic: false,
+        reason: 'manual-service-update-required'
+      }
+    }
     if (!this.autoUpdaterInitialized) {
       return {
         installMode: this.updateInstallMode,
@@ -33,7 +40,6 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
     }
     const linuxPackageType = getLinuxPackageType()
     if (
-      isCustomBuild(app.getVersion()) ||
       this.updateInstallMode === 'unsupported-headless-serve' ||
       linuxPackageType === 'deb' ||
       linuxPackageType === 'rpm' ||
