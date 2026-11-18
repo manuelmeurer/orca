@@ -16,6 +16,7 @@ import { prepareThisProcessShipItStaging } from '../mac-install/shipit-leftover-
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
     if (isCustomBuild(app.getVersion())) {
+      this.sendToMainWindow('updater:quitAndInstallAborted')
       this.sendStatus({
         state: 'error',
         message: CUSTOM_UPDATE_INSTRUCTIONS,

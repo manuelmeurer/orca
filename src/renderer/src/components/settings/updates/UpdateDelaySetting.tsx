@@ -56,7 +56,9 @@ function canRecheckAfterDelayChange(status: UpdateStatus): boolean {
   )
 }
 
-export function UpdateDelaySetting(): React.JSX.Element {
+export function UpdateDelaySetting({
+  recheckOnDelayChange = true
+}: { recheckOnDelayChange?: boolean } = {}): React.JSX.Element {
   const t = useTranslate()
   const intlLocale = useIntlLocale()
   const delayDays = useAppStore((s) => normalizeUpdateDelayDays(s.settings?.updateDelayDays))
@@ -87,7 +89,7 @@ export function UpdateDelaySetting(): React.JSX.Element {
     if (next === delayDays) {
       return
     }
-    const shouldRecheck = canRecheckAfterDelayChange(updateStatus)
+    const shouldRecheck = recheckOnDelayChange && canRecheckAfterDelayChange(updateStatus)
     void updateSettings({ updateDelayDays: next }).then(() => {
       if (shouldRecheck) {
         void window.api.updater.check({ ignoreUpdateDelay: false })
