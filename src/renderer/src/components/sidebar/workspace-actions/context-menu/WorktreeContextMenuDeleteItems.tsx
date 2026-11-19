@@ -1,4 +1,6 @@
 import { Trash2 } from 'lucide-react'
+import { useAppStore } from '@/store'
+import { selectActiveWorkspaceDeleteTarget } from '../deletion/active-workspace-delete'
 import { DropdownMenuItem, DropdownMenuShortcut } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useOptionalShortcutLabel } from '@/lib/keyboard/useShortcutLabel'
@@ -19,6 +21,15 @@ export function WorktreeContextMenuDeleteItems({ model }: { model: WorktreeConte
     removesProject,
     worktree
   } = model
+  // Why: the shortcut deletes the workspace shown in the main area, not the right-clicked row.
+  const isActiveDeleteTarget = useAppStore((state) => {
+    const target = selectActiveWorkspaceDeleteTarget(state)
+    return (
+      target?.id === worktree.id &&
+      target.hostId === worktree.hostId &&
+      target.instanceId === worktree.instanceId
+    )
+  })
   const projectMissing = !isMultiContext && worktree.isMainWorktree && !removesProject
   const label = contextDeletePending
     ? t('auto.components.sidebar.WorktreeContextMenu.b42391d8bf', 'Deleting…')
@@ -77,10 +88,7 @@ export function WorktreeContextMenuDeleteItems({ model }: { model: WorktreeConte
       >
         <Trash2 className="size-3.5" />
         {label}
-        {!removesProject &&
-        !projectMissing &&
-        (!isMultiContext || batchDeleteWorktrees.length > 0) &&
-        deleteShortcut ? (
+        {!isMultiContext && !removesProject && isActiveDeleteTarget && deleteShortcut ? (
           <DropdownMenuShortcut>{deleteShortcut}</DropdownMenuShortcut>
         ) : null}
       </DropdownMenuItem>
