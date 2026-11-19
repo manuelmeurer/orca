@@ -51,6 +51,8 @@ it.each(['compact', 'full'] as const)(
     useAppStore.setState({
       repos: [TEST_REPO],
       worktreesByRepo: { [TEST_REPO.id]: [worktree] },
+      activeWorktreeId: worktree.id,
+      activeView: 'terminal',
       agentActivityDisplayMode: mode,
       unifiedTabsByWorktree: { [worktree.id]: [tab] },
       agentStatusByPaneKey: acceptedAgentStatuses([

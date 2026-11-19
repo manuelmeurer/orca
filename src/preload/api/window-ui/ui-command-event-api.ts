@@ -119,6 +119,7 @@ export type UiCommandEventApi = {
   onOpenQuickOpen: (callback: () => void) => () => void
   onToggleQuickCommandsMenu: (callback: () => void) => () => void
   onOpenNewWorkspace: (callback: () => void) => () => void
+  onDeleteCurrentWorkspace: (callback: () => void) => () => void
   onOpenWorkspaceBoard: (callback: () => void) => () => void
   onOpenTasks: (callback: () => void) => () => void
   onToggleAgentDashboard: (callback: () => void) => () => void
