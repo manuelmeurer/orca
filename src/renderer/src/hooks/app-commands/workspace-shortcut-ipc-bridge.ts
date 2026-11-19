@@ -4,6 +4,7 @@ import { activateTabNumberShortcut } from '@/lib/keyboard/tab-number-shortcuts'
 import { emitCmdJRowIndexJump } from '@/lib/workspace/search/palette/cmd-j-row-index-jump'
 import { getVisibleWorktreeShortcutTargets } from '@/components/sidebar/worktree-list/listing/visible-worktrees'
 import { activateAndRevealWorkspace } from '@/lib/workspace/activation/worktree-activation'
+import { deleteActiveWorkspaceFromShortcut } from '@/components/sidebar/workspace-actions/deletion/active-workspace-delete'
 import { isGitRepoKind } from '../../../../shared/repository/repo-kind'
 import { runBuiltInOrReplacement } from '@/lib/plugins/commands/plugin-command-replacements'
 import { useAppStore } from '../../store/index'
@@ -30,6 +31,12 @@ export function registerWorkspaceShortcutIpcBridge(unsubs: (() => void)[]): void
     window.api.ui.onOpenNewWorkspace(() => {
       const store = useAppStore.getState()
       openNewWorkspaceFromShortcut(store)
+    })
+  )
+
+  unsubs.push(
+    window.api.ui.onDeleteCurrentWorkspace(() => {
+      deleteActiveWorkspaceFromShortcut(useAppStore.getState())
     })
   )
 
