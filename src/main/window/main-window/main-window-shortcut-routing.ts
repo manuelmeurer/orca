@@ -99,7 +99,11 @@ export function installMainWindowShortcutRouting(args: {
       return true
     }
 
-    if (action.type === 'toggleQuickCommandsMenu' && isAutoRepeat) {
+    // Why: a held destructive chord must open one confirmation, never re-fire or leak to xterm.
+    if (
+      (action.type === 'toggleQuickCommandsMenu' || action.type === 'deleteCurrentWorkspace') &&
+      isAutoRepeat
+    ) {
       event.preventDefault()
       return true
     }
