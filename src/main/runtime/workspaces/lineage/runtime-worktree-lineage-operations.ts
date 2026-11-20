@@ -14,16 +14,16 @@ import type {
 } from '../../../../shared/worktree/lineage-types'
 import type { WorkspaceKey } from '../../../../shared/workspace/identity/workspace-scope'
 import type { Repo } from '../../../../shared/repository/repo-types'
+import { withAllowedCreateParent } from './child-worktree-rules'
 export abstract class RuntimeWorktreeLineageOperations extends OrcaRuntimeWithResolveBrowserNetworkExecutionHostForWorktree {
   /** `childRepo` scopes the parent to the new worktree's execution host (#12757). */
   resolveLineageForWorktreeCreate(
     input?: WorktreeLineageInput,
     childRepo?: Repo
   ): Promise<WorktreeLineageResolution> {
-    return this.worktreeLineage.resolveCreate(
-      input,
-      childRepo ? getRepoExecutionHostId(childRepo) : undefined
-    )
+    return this.worktreeLineage
+      .resolveCreate(input, childRepo ? getRepoExecutionHostId(childRepo) : undefined)
+      .then((resolution) => withAllowedCreateParent(this.store, resolution, childRepo))
   }
 
   protected getOrchestrationDbIfAvailable(): OrchestrationDb | null {
