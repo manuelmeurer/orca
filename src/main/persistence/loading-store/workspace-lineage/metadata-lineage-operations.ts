@@ -32,9 +32,9 @@ import {
   getAllWorktreeMetaForHost as getAllWorktreeMetaForHostOperation,
   getWorktreeMetaForHost as getWorktreeMetaForHostOperation,
   migrateWorktreeMetadataLocator,
-  removeWorktreeMetadataForHost,
-  setWorktreeMetaForHost as setWorktreeMetaForHostOperation
+  removeWorktreeMetadataForHost
 } from '../worktree-metadata/worktree-identity-metadata'
+import { followParentStatus, setWorktreeMetaFollowingParent } from './child-status-follows-parent'
 import * as saved from '../../profile-save-domains'
 import { releaseMatchingLineage } from './workspace-lineage-release'
 import {
@@ -110,13 +110,8 @@ export class MetadataLineageOperations {
     target: HostWorktreeTarget,
     meta: Partial<WorktreeMeta> & WorkspaceAttachmentMutation & DiffCommentBaseMutation
   ): WorktreeMeta {
-    return setWorktreeMetaForHostOperation(
-      this[metadataLineageOperationsContext].runtime,
-      this[metadataLineageOperationsContext].scheduling,
-      target.id,
-      target.hostId,
-      meta
-    )
+    const { runtime, scheduling } = this[metadataLineageOperationsContext]
+    return setWorktreeMetaFollowingParent(runtime, scheduling, target, meta)
   }
 
   removeWorktreeMeta(target: HostWorktreeTarget): void {
@@ -255,6 +250,8 @@ export class MetadataLineageOperations {
       toWorkspaceLineageRow(lineage)
     delete state.crossStoreLineageByChildKey?.[worktreeWorkspaceKey(target.id)]
     saveDomains(this, saved.WORKSPACE_LINEAGE_DOMAINS)
+    const { runtime, scheduling } = this[metadataLineageOperationsContext]
+    followParentStatus(runtime, scheduling, target)
     return lineage
   }
 
