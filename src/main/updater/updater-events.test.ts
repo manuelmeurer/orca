@@ -237,6 +237,10 @@ describe('registerAutoUpdaterHandlers release history', () => {
     const context = createContext({
       getCurrentStatus: vi.fn(() => current),
       getActiveUpdateCheckEventAttemptId: vi.fn(() => activeAttemptId),
+      publishUpdateOffer: vi.fn((status: UpdateStatus) => {
+        current = status
+        activeAttemptId = null
+      }),
       sendStatus: vi.fn((status: UpdateStatus) => {
         current = status
         activeAttemptId = null
@@ -251,7 +255,12 @@ describe('registerAutoUpdaterHandlers release history', () => {
     )
 
     const available = { state: 'available', version: '1.0.61', changelog: null }
-    await vi.waitFor(() => expect(context.sendStatus).toHaveBeenCalledWith(available))
+    await vi.waitFor(() =>
+      expect(context.publishUpdateOffer).toHaveBeenCalledWith(available, {
+        eligible: true,
+        backgroundCheck: true
+      })
+    )
     const history: UpdateReleaseHistory = {
       installedVersion: '1.0.51',
       newerReleaseCount: 1,
