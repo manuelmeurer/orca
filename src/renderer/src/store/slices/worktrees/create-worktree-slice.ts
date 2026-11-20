@@ -40,6 +40,10 @@ import {
   guardUpdateWorktreeMetaHostStatus,
   guardUpdateWorktreesMetaHostStatus
 } from './metadata/foreign-host-status-guard'
+import {
+  guardUpdateWorktreeMetaChildStatus,
+  guardUpdateWorktreesMetaChildStatus
+} from './metadata/child-status-guard'
 import { createSetWorktreesPinnedAndReveal } from './session/worktree-pin-reveal'
 import { createBumpWorktreeActivity } from './session/worktree-activity-bump'
 import {
@@ -89,9 +93,15 @@ export const createWorktreeSlice: StateCreator<AppState, [], [], WorktreeSlice> 
   markWorktreesQueuedForDeletion: createMarkWorktreesQueuedForDeletion(set, get),
   forceDeletePreservedBranch: createForceDeletePreservedBranch(set, get),
   clearWorktreeDeleteState: createClearWorktreeDeleteState(set, get),
-  updateWorktreeMeta: guardUpdateWorktreeMetaHostStatus(createUpdateWorktreeMeta(set, get), get),
+  updateWorktreeMeta: guardUpdateWorktreeMetaChildStatus(
+    guardUpdateWorktreeMetaHostStatus(createUpdateWorktreeMeta(set, get), get),
+    get
+  ),
   ensureHostedReviewPushTarget: createEnsureHostedReviewPushTarget(set, get),
-  updateWorktreesMeta: guardUpdateWorktreesMetaHostStatus(createUpdateWorktreesMeta(set, get), get),
+  updateWorktreesMeta: guardUpdateWorktreesMetaChildStatus(
+    guardUpdateWorktreesMetaHostStatus(createUpdateWorktreesMeta(set, get), get),
+    get
+  ),
   setWorktreesPinnedAndReveal: createSetWorktreesPinnedAndReveal(set, get),
   observeTerminalGitHubPullRequestLink: createObserveTerminalGitHubPullRequestLink(get),
   bumpWorktreeActivity: createBumpWorktreeActivity(set, get),

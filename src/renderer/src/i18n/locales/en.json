@@ -2574,7 +2574,8 @@
           "localBaseRefNotUpdated": "{{value0}} not updated",
           "localBaseRefNotUpdatedDirty": "Uncommitted changes in {{value0}}.",
           "localBaseRefNotUpdatedNotFastForward": "Local-only commits on {{value0}}.",
-          "localBaseRefNotUpdatedError": "Git error."
+          "localBaseRefNotUpdatedError": "Git error.",
+          "statusFollowsParent": "Status follows the parent workspace {{value0}}. Change it there."
         },
         "repos": {
           "2975400634": "Update Orca server to open non-Git folders on this runtime.",
