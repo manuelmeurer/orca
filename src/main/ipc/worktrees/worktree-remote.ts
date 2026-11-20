@@ -110,7 +110,10 @@ import {
 import { sharesWorktreeLineageBoundary } from '../../../shared/worktree/lineage/resolved-worktree-lineage'
 import { CrossStoreParentRefSchema } from '../../../shared/rpc-contract/workspaces/cross-store-parent-params'
 import { assertParentInAnotherStore } from '../../runtime/workspaces/lineage/cross-store-parent-store-check'
-import { assertCreateDialogParentAllowed } from '../../runtime/workspaces/lineage/child-worktree-rules'
+import {
+  assertCreateDialogParentAllowed,
+  createDialogChildStatus
+} from '../../runtime/workspaces/lineage/child-worktree-rules'
 import {
   crossStoreManualLineage,
   recordCreatedWorktreeLineage
@@ -1757,7 +1760,8 @@ async function performLocalWorktreeCreate(
     ...(args.linkedTaskSourceContext !== undefined
       ? { linkedTaskSourceContext: args.linkedTaskSourceContext }
       : {}),
-    ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {})
+    ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {}),
+    ...createDialogChildStatus(store, args.parentWorkspace)
   }
   const { worktree } = timing.timeSync('persist_metadata', () => {
     const meta = store.setWorktreeMeta(hostWorktreeTargetForRepo(worktreeId, repo), metaUpdates)

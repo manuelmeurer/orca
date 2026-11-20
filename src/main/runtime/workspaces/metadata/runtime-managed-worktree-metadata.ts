@@ -26,6 +26,7 @@ import { RuntimeLineageError, explicitParentError } from '../lineage/runtime-lin
 import type { ResolvedWorkspaceParent } from '../lineage/runtime-worktree-lineage-resolution'
 import { assertParentInAnotherStore } from '../lineage/cross-store-parent-store-check'
 import type { CrossStoreParentRef } from '../../../../shared/worktree/lineage-types'
+import { assertStatusFollowsParent, otherRepoIdsBelow } from '../lineage/child-worktree-rules'
 import { LINEAGE_PARENT_CHANGED } from '../../../../shared/worktree/lineage-parent-changed'
 import type { ResolvedWorktree } from '../catalog/runtime-worktree-path-identity'
 
@@ -116,6 +117,10 @@ export async function updateRuntimeManagedWorktreeMetadata(args: {
       throw new Error(`${LINEAGE_PARENT_CHANGED}: the workspace was moved since.`)
     }
   }
+  // Before any write; a parent change in the same call brings the new parent's status instead.
+  if (metaUpdates.workspaceStatus !== undefined && !lineage) {
+    assertStatusFollowsParent(args.store, target, metaUpdates.workspaceStatus)
+  }
   if (lineage?.noParent === true) {
     assertParentUnchanged()
     args.store.removeWorktreeLineage?.(target)
@@ -184,6 +189,12 @@ export async function updateRuntimeManagedWorktreeMetadata(args: {
   // Push explicitly for CLI mutations outside renderer optimistic updates.
   args.ports.invalidateResolved()
   args.ports.notifyChanged(worktree.repoId)
+  // The store moved everything below to this status too.
+  if (metaUpdates.workspaceStatus !== undefined) {
+    for (const repoId of otherRepoIdsBelow(args.store, target)) {
+      args.ports.notifyChanged(repoId)
+    }
+  }
   if (lineage) {
     for (const repoId of new Set([previousParentRepoId, nextParentRepoId])) {
       if (repoId && repoId !== worktree.repoId) {
