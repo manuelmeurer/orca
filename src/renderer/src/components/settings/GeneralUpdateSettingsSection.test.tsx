@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useAppStore } from '../../store'
+import { TooltipProvider } from '../ui/tooltip'
 import { GeneralUpdateSettingsSection } from './updates/GeneralUpdateSettingsSection'
 import { CUSTOM_UPDATE_INSTRUCTIONS } from '../../../../shared/custom-update-policy'
 import type { RemoteServerUpdateEntry } from '../../runtime/hosts/updates/remote-server-update-coordinator'
@@ -38,7 +39,11 @@ afterEach(() => {
 })
 
 it('shows custom installer instructions and release notes without update actions', async () => {
-  render(<GeneralUpdateSettingsSection />)
+  render(
+    <TooltipProvider>
+      <GeneralUpdateSettingsSection />
+    </TooltipProvider>
+  )
 
   expect(screen.getByText(/Install with bin\/orca-custom install/)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Download update|Restart to update/i })).toBeNull()
