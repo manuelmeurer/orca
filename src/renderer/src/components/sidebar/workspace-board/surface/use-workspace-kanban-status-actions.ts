@@ -12,6 +12,7 @@ import {
 } from '@/store/workspaces/status/host-workspace-status-columns'
 import type { WorkspaceStatusDefinition, Worktree } from '../../../../../../shared/worktree/types'
 import { translate } from '@/i18n/i18n'
+import { worktreeParentFinder } from '@/store/slices/worktrees/metadata/child-status-guard'
 
 type WorkspaceStatuses = ReturnType<typeof useAppStore.getState>['workspaceStatuses']
 
@@ -109,9 +110,14 @@ export function useWorkspaceKanbanStatusActions(args: {
       args.setWorkspaceStatuses(next)
       recordInteraction()
       const state = useAppStore.getState()
+      const parentOf = worktreeParentFinder(state)
       for (const worktree of args.allWorktrees) {
         // A host that still defines this id owns the card's column; rewriting it would change host data.
         if (ownerHostDefinesStatus(state, worktree, statusId)) {
+          continue
+        }
+        // A child moves with its parent's write; its own would be refused.
+        if (parentOf(worktree)) {
           continue
         }
         if (getWorkspaceStatus(worktree, args.boardStatuses) === statusId) {

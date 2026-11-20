@@ -13,6 +13,7 @@ import { warnAmbiguousOwnerOnce } from '@/lib/workspace/ownership/ambiguous-owne
 import type { WorktreeOperationRouteState } from '@/lib/workspace/ownership/worktree-operation-route'
 import type { RowLessSource as RuntimeLinearSettings } from '@/runtime/hosts/selection/default-creation-host'
 import { translate } from '@/i18n/i18n'
+import { worktreeParentFinder } from '@/store/slices/worktrees/metadata/child-status-guard'
 import type {
   WorkspaceStatus,
   WorkspaceStatusDefinition,
@@ -159,9 +160,14 @@ export function useWorkspaceBoardTaskStatusSync(args: {
 }): (worktreeKeys: readonly string[], status: WorkspaceStatus) => void {
   return useCallback(
     (worktreeKeys, status) => {
+      // A child's own move is refused, so its linked issue must not move either.
+      const parentOf = worktreeParentFinder(useAppStore.getState())
       const request = getWorkspaceBoardTaskStatusSyncRequest({
         enabled: args.enabled,
-        worktreeKeys,
+        worktreeKeys: worktreeKeys.filter((key) => {
+          const worktree = args.worktreesByKey.get(key)
+          return !worktree || !parentOf(worktree)
+        }),
         status,
         worktreesByKey: args.worktreesByKey,
         workspaceStatuses: args.workspaceStatuses
