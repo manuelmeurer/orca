@@ -28,6 +28,7 @@ import { assertParentInAnotherStore } from './cross-store-parent-store-check'
 import { savedInstanceIdReader } from './saved-lineage-reads'
 import { getCanonicalUserDataPath } from '../../../persistence/loading-store/user-data-path'
 import { RuntimeLineageError, LINEAGE_PARENT_AMBIGUOUS } from './runtime-lineage-error'
+import { assertChildWorktreeAllowed } from './child-worktree-rules'
 import {
   formatAmbiguousCwdParentMessage,
   enforceCreateLineageHostBoundary,
@@ -230,6 +231,15 @@ export class RuntimeWorktreeLineageController {
         break
       }
       cursor = lineage.parentWorktreeId
+    }
+    if (store) {
+      assertChildWorktreeAllowed({
+        store,
+        hostId: child.hostId ?? parent.hostId,
+        parentId: parent.id,
+        childRepoId: child.repoId,
+        childId: child.id
+      })
     }
   }
 

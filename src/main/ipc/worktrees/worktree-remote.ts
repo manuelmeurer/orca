@@ -110,6 +110,7 @@ import {
 import { sharesWorktreeLineageBoundary } from '../../../shared/worktree/lineage/resolved-worktree-lineage'
 import { CrossStoreParentRefSchema } from '../../../shared/rpc-contract/workspaces/cross-store-parent-params'
 import { assertParentInAnotherStore } from '../../runtime/workspaces/lineage/cross-store-parent-store-check'
+import { assertCreateDialogParentAllowed } from '../../runtime/workspaces/lineage/child-worktree-rules'
 import {
   crossStoreManualLineage,
   recordCreatedWorktreeLineage
@@ -250,6 +251,7 @@ export function assertAttachableParentWorkspace(
   if (parentScope.type === 'worktree' && !store.getWorktreeMeta(parentScope.worktreeId)) {
     console.warn(`[worktree-create] parent worktree workspace not found: ${parentWorkspace}`)
   }
+  assertCreateDialogParentAllowed(store, parentWorkspace, childWorkspaceKey)
 }
 
 type CreatedWorktreeLineageRecords = {
