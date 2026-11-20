@@ -243,6 +243,10 @@ describe('registerAutoUpdaterHandlers release history', () => {
         eventOrder.push('publish')
         current = status
         activeAttemptId = null
+      }),
+      sendStatus: vi.fn((status: UpdateStatus) => {
+        current = status
+        activeAttemptId = null
       })
     })
     const { registerAutoUpdaterHandlers } = await import('./updater-events')
