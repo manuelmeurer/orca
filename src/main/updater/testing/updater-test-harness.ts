@@ -33,7 +33,7 @@ export function createUpdaterMocks() {
     allowDowngrade: false,
     disableDifferentialDownload: false,
     allowPrerelease: false,
-    logger: undefined as unknown,
+    logger: undefined,
     on: vi.fn((event: string, listener: EventListener) => {
       updaterListeners.set(event, [...(updaterListeners.get(event) ?? []), listener])
       return autoUpdaterMock
