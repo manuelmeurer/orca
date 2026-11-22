@@ -226,18 +226,21 @@ describe('registerAutoUpdaterHandlers release history', () => {
 
   it('shows the update without waiting for release history, then attaches it', async () => {
     const { fetchReleaseHistory } = await import('./releases/updater-release-history')
+    const eventOrder: string[] = []
     let resolveHistory: (history: UpdateReleaseHistory) => void = () => {}
-    vi.mocked(fetchReleaseHistory).mockReturnValueOnce(
-      new Promise((resolve) => {
+    vi.mocked(fetchReleaseHistory).mockImplementationOnce(() => {
+      eventOrder.push('history')
+      return new Promise((resolve) => {
         resolveHistory = resolve
       })
-    )
+    })
     let current: UpdateStatus = { state: 'checking' }
     let activeAttemptId: number | null = 1
     const context = createContext({
       getCurrentStatus: vi.fn(() => current),
       getActiveUpdateCheckEventAttemptId: vi.fn(() => activeAttemptId),
-      sendStatus: vi.fn((status: UpdateStatus) => {
+      publishUpdateOffer: vi.fn((status: UpdateStatus) => {
+        eventOrder.push('publish')
         current = status
         activeAttemptId = null
       })
@@ -251,7 +254,15 @@ describe('registerAutoUpdaterHandlers release history', () => {
     )
 
     const available = { state: 'available', version: '1.0.61', changelog: null }
-    await vi.waitFor(() => expect(context.sendStatus).toHaveBeenCalledWith(available))
+    await vi.waitFor(() =>
+      expect(context.publishUpdateOffer).toHaveBeenCalledWith(available, {
+        eligible: true,
+        backgroundCheck: true
+      })
+    )
+    await vi.waitFor(() => expect(fetchReleaseHistory).toHaveBeenCalledOnce())
+    expect(eventOrder).toEqual(['publish', 'history'])
+    expect(context.sendStatus).not.toHaveBeenCalled()
     const history: UpdateReleaseHistory = {
       installedVersion: '1.0.51',
       newerReleaseCount: 1,

@@ -107,13 +107,15 @@ export function UpdateAvailableRichContent({
         )}
       </p>
       {releaseHistory && <UpdateReleaseHistoryPager history={releaseHistory} />}
-      <button
-        type="button"
-        className="text-xs text-muted-foreground underline hover:text-foreground self-start"
-        onClick={(event) => openAppHttpLink(release.releaseNotesUrl, { event })}
-      >
-        {t('auto.components.UpdateCard.aad383aecc', 'Release notes')}
-      </button>
+      {!releaseHistory && (
+        <button
+          type="button"
+          className="text-xs text-muted-foreground underline hover:text-foreground self-start"
+          onClick={(event) => openAppHttpLink(release.releaseNotesUrl, { event })}
+        >
+          {t('auto.components.UpdateCard.aad383aecc', 'Release notes')}
+        </button>
+      )}
       {externallyManaged ? (
         <ExternallyManagedNote />
       ) : (

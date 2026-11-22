@@ -133,10 +133,6 @@ export function registerAutoUpdaterHandlers({
     void (async () => {
       try {
         const releaseCheck = !isLocalBuildCheck() && !isPinnedBuildCheck()
-        // Start the listing now; it attaches to the available status when it lands.
-        const releaseHistory = releaseCheck
-          ? fetchReleaseHistory(info.version, app.getVersion())
-          : null
         const changelog = releaseCheck
           ? await fetchChangelog(info.version, app.getVersion()).catch(() => null)
           : null
@@ -181,6 +177,9 @@ export function registerAutoUpdaterHandlers({
             backgroundCheck: !wasUserInitiated && !getUserInitiatedCheck()
           }
         )
+        const releaseHistory = releaseCheck
+          ? fetchReleaseHistory(info.version, app.getVersion())
+          : null
         void releaseHistory?.then((history) => {
           const status = getCurrentStatus()
           // Attach only while this offer is still shown and no newer check could be cut short.

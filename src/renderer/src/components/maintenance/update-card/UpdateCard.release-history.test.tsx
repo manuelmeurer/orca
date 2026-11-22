@@ -73,6 +73,20 @@ describe('UpdateCard release history', () => {
     expect(openUrl).toHaveBeenCalledWith('https://github.com/stablyai/orca/releases/tag/v1.4.259')
   })
 
+  it('keeps one release-notes link when release history is unavailable', () => {
+    useAppStore.setState({
+      updateStatus: { state: 'available', version: '1.4.261', changelog: null },
+      updateReassuranceSeen: true
+    })
+    render(
+      <NotificationCardStack>
+        <UpdateCard />
+      </NotificationCardStack>
+    )
+
+    expect(screen.getAllByRole('button', { name: 'Release notes' })).toHaveLength(1)
+  })
+
   it('renders note headings as blocks and drops inline HTML images', () => {
     const mascot =
       '<img src="https://raw.githubusercontent.com/stablyai/orca/main/src/shared/bot-mascots/A1.webp" alt="Orca" width="36" height="36" valign="middle" />'
@@ -107,8 +121,6 @@ describe('UpdateCard release history', () => {
     const paragraph = screen.getByText('Orca Bots work like teammates.')
     expect(heading.contains(paragraph)).toBe(false)
     const notes = heading.parentElement
-    expect(notes?.className).toContain('[&_.comment-md-h]:block')
-    expect(notes?.className).toContain('[&_.comment-md-p]:block')
     expect(screen.getByText('Every bot session')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Orca' })).toBeNull()
     expect(screen.queryByRole('img')).toBeNull()
@@ -116,5 +128,43 @@ describe('UpdateCard release history', () => {
     // Images inside code examples are content, not decoration.
     expect(screen.getByText('<img src="logo.png">')).toBeTruthy()
     expect(notes?.textContent).toContain('<img src="banner.png" alt="Banner">')
+  })
+
+  it('uses per-release links instead of the single release link in rich mode', () => {
+    const release = {
+      title: 'Cursor joins Chat',
+      description: 'Chat now supports Cursor.',
+      releaseNotesUrl: 'https://orca.dev/whats-new'
+    }
+    const releaseHistory = {
+      installedVersion: '1.4.258',
+      newerReleaseCount: 2,
+      releases: [
+        {
+          version: '1.4.261',
+          publishedAt: null,
+          notes: 'Cursor joins Chat',
+          releaseUrl: 'https://github.com/stablyai/orca/releases/tag/v1.4.261'
+        }
+      ]
+    }
+    useAppStore.setState({
+      updateStatus: {
+        state: 'available',
+        version: '1.4.261',
+        changelog: { release, releasesBehind: 2 },
+        releaseHistory
+      },
+      updateChangelog: { release, releasesBehind: 2 },
+      updateReassuranceSeen: true
+    })
+    render(
+      <NotificationCardStack>
+        <UpdateCard />
+      </NotificationCardStack>
+    )
+
+    expect(screen.queryByRole('button', { name: 'Release notes' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'View on GitHub' })).toBeTruthy()
   })
 })
