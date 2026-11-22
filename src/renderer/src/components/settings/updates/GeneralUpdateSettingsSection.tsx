@@ -223,12 +223,11 @@ export function GeneralUpdateSettingsSection({
         <p className="text-xs text-muted-foreground empty:hidden">
           {updateStatus.state === 'idle' &&
             appVersion !== null &&
-            (isCustomBuild(appVersion)
-              ? 'Automatic update checks are disabled for custom builds.'
-              : t(
-                  'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
-                  'Updates are checked automatically on launch.'
-                ))}
+            !isCustomBuild(appVersion) &&
+            t(
+              'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
+              'Updates are checked automatically on launch.'
+            )}
           {updateStatus.state === 'checking' &&
             t(
               'auto.components.settings.GeneralUpdateSettingsSection.31fd7150cf',
@@ -305,7 +304,12 @@ export function GeneralUpdateSettingsSection({
             )}
           {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
             <>
-              {updateStatus.manualUpdateInstructions}{' '}
+              {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
+              {updateStatus.version}{' '}
+              {t(
+                'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
+                'is available.'
+              )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
                   href={
@@ -378,6 +382,12 @@ export function GeneralUpdateSettingsSection({
         {updateStatus.state === 'available' && updateStatus.releaseHistory && (
           <UpdateReleaseHistoryPager history={updateStatus.releaseHistory} />
         )}
+        {(updateStatus.state === 'available' || updateStatus.state === 'downloaded') &&
+          updateStatus.manualUpdateInstructions && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {updateStatus.manualUpdateInstructions}
+            </p>
+          )}
       </SearchableSetting>
       {isWebClientLocation() ? null : <AutomaticUpdatesSetting />}
       <UpdateDelaySetting

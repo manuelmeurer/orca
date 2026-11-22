@@ -53,6 +53,40 @@ it('shows custom installer instructions and release notes without update actions
   )
 })
 
+it('shows custom installer instructions below the release history in settings', () => {
+  useAppStore.setState({
+    updateStatus: {
+      state: 'available',
+      version: '1.4.208',
+      changelog: null,
+      manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS,
+      releaseHistory: {
+        installedVersion: '1.4.207+custom.2',
+        newerReleaseCount: 1,
+        releases: [
+          {
+            version: '1.4.208',
+            publishedAt: '2026-11-20T10:00:00Z',
+            notes: 'Faster startup',
+            releaseUrl: 'https://github.com/stablyai/orca/releases/tag/v1.4.208'
+          }
+        ]
+      }
+    }
+  })
+  render(
+    <TooltipProvider>
+      <GeneralUpdateSettingsSection />
+    </TooltipProvider>
+  )
+
+  const pagerLink = screen.getByRole('button', { name: 'View on GitHub' })
+  const instructions = screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)
+  expect(
+    pagerLink.compareDocumentPosition(instructions) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+})
+
 it('gives paired clients the custom installer instructions for a custom server', () => {
   const entry: RemoteServerUpdateEntry = {
     environmentId: 'server',
