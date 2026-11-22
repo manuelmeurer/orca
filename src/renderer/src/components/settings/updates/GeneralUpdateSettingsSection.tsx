@@ -184,12 +184,11 @@ export function GeneralUpdateSettingsSection({
         <p className="text-xs text-muted-foreground">
           {updateStatus.state === 'idle' &&
             appVersion !== null &&
-            (isCustomBuild(appVersion)
-              ? 'Automatic update checks are disabled for custom builds.'
-              : t(
-                  'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
-                  'Updates are checked automatically on launch.'
-                ))}
+            !isCustomBuild(appVersion) &&
+            t(
+              'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
+              'Updates are checked automatically on launch.'
+            )}
           {updateStatus.state === 'checking' &&
             t(
               'auto.components.settings.GeneralUpdateSettingsSection.31fd7150cf',
@@ -199,17 +198,15 @@ export function GeneralUpdateSettingsSection({
             <>
               {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
               {updateStatus.version}{' '}
-              {updateStatus.manualUpdateInstructions
-                ? `is available. ${updateStatus.manualUpdateInstructions}`
-                : updateStatus.externallyManaged
-                  ? t(
-                      'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
-                      'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
-                    )
-                  : t(
-                      'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
-                      'is available. Click "Download Update" to download it.'
-                    )}{' '}
+              {updateStatus.externallyManaged && !updateStatus.manualUpdateInstructions
+                ? t(
+                    'auto.components.settings.GeneralUpdateSettingsSection.e3b9d21c07',
+                    'is available. Update Orca through your system package manager — Orca cannot install this release itself.'
+                  )
+                : t(
+                    'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
+                    'is available.'
+                  )}{' '}
               {updateStatus.source !== 'local' && !updateStatus.releaseHistory && (
                 <a
                   href={
@@ -266,7 +263,12 @@ export function GeneralUpdateSettingsSection({
             )}
           {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
             <>
-              {updateStatus.manualUpdateInstructions}{' '}
+              {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
+              {updateStatus.version}{' '}
+              {t(
+                'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
+                'is available.'
+              )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
                   href={
@@ -333,6 +335,12 @@ export function GeneralUpdateSettingsSection({
         {updateStatus.state === 'available' && updateStatus.releaseHistory && (
           <UpdateReleaseHistoryPager history={updateStatus.releaseHistory} />
         )}
+        {(updateStatus.state === 'available' || updateStatus.state === 'downloaded') &&
+          updateStatus.manualUpdateInstructions && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {updateStatus.manualUpdateInstructions}
+            </p>
+          )}
       </SearchableSetting>
       {isWebClientLocation() ? null : <AutomaticUpdatesSetting />}
       <UpdateDelaySetting
