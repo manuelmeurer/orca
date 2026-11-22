@@ -38,6 +38,10 @@ export type RunningAgentTargetState = Pick<
     sendApprovalGuardEnvironmentIds?: ReadonlySet<string>
   }
 
+export type RunningAgentStatusEntries =
+  | Pick<ReadonlyMap<string, AgentStatusEntry>, 'entries' | 'get'>
+  | Record<string, AgentStatusEntry>
+
 type RunningAgentSendTargetEligibility = {
   status: 'eligible' | 'disabled'
   disabledReason?: string
@@ -112,7 +116,7 @@ function deriveTerminalAgentSendTargets(
   const tabsById = new Map(tabs.map((tab) => [tab.id, tab]))
   const targets: TerminalAgentSendTarget[] = []
 
-  for (const [paneKey, entry] of getAgentStatusEntries(state)) {
+  for (const [paneKey, entry] of getAgentStatusEntries(state.agentStatusByPaneKey)) {
     const parsed = parsePaneKey(paneKey)
     if (!parsed) {
       continue
@@ -178,7 +182,7 @@ function deriveStructuredAgentSendTargets(
       continue
     }
     const paneKey = structuredAgentSessionPaneKey(tab.id, tab.entityId)
-    const entry = getRunningAgentStatusEntry(state, paneKey) ?? null
+    const entry = getRunningAgentStatusEntry(state.agentStatusByPaneKey, paneKey) ?? null
     if ((entry !== null) !== (status === 'with-status')) {
       continue
     }
@@ -268,26 +272,19 @@ export function resolveSendTargetForegroundAgent(
 }
 
 function getAgentStatusEntries(
-  state: RunningAgentTargetState
+  statuses: RunningAgentStatusEntries
 ): Iterable<[string, AgentStatusEntry]> {
-  const statuses = state.agentStatusByPaneKey as
-    | ReadonlyMap<string, AgentStatusEntry>
-    | Record<string, AgentStatusEntry>
-  return typeof (statuses as ReadonlyMap<string, AgentStatusEntry>).entries === 'function'
-    ? (statuses as ReadonlyMap<string, AgentStatusEntry>).entries()
-    : Object.entries(statuses as Record<string, AgentStatusEntry>)
+  if (typeof statuses.entries === 'function') {
+    return statuses.entries()
+  }
+  return Object.entries(statuses)
 }
 
 export function getRunningAgentStatusEntry(
-  state: RunningAgentTargetState,
+  statuses: RunningAgentStatusEntries,
   paneKey: string
 ): AgentStatusEntry | undefined {
-  const statuses = state.agentStatusByPaneKey as
-    | ReadonlyMap<string, AgentStatusEntry>
-    | Record<string, AgentStatusEntry>
-  return typeof (statuses as ReadonlyMap<string, AgentStatusEntry>).get === 'function'
-    ? (statuses as ReadonlyMap<string, AgentStatusEntry>).get(paneKey)
-    : (statuses as Record<string, AgentStatusEntry>)[paneKey]
+  return typeof statuses.get === 'function' ? statuses.get(paneKey) : statuses[paneKey]
 }
 
 /** The pane's refusal for a send that bypasses the target list, such as the focused terminal. */
@@ -307,7 +304,7 @@ export function terminalPaneSendRefusal(
     state,
     tab,
     ptyId,
-    getRunningAgentStatusEntry(state, makePaneKey(tabId, leafId)),
+    getRunningAgentStatusEntry(state.agentStatusByPaneKey, makePaneKey(tabId, leafId)),
     makePaneKey(tabId, leafId),
     resolveLeafTitle(state, tabId, leafId, tab.title)
   )

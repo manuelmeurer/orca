@@ -149,7 +149,7 @@ function deriveTitleHintAgentTarget(
   const titleEvidence = detectTitleHintPaneEvidence(paneTitleResolution, tab.title)
   const paneKey = makePaneKey(tab.id, leafId)
   if (!titleEvidence) {
-    if (getRunningAgentStatusEntry(state, paneKey)) {
+    if (getRunningAgentStatusEntry(state.agentStatusByPaneKey, paneKey)) {
       return null
     }
     const foregroundAgent = resolveSendTargetForegroundAgent(state, paneKey, ptyId)
