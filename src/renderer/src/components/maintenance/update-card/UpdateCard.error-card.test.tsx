@@ -217,7 +217,7 @@ it('hides the rich update action for custom builds', () => {
   expect(screen.getByText('New: New release')).toBeTruthy()
   expect(screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Update' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Read the full release notes' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Release notes' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Dismiss update' })).toBeTruthy()
   expect(screen.queryByText(/Your terminal sessions won't be interrupted/)).toBeNull()
 })

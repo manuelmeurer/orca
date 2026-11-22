@@ -51,11 +51,12 @@ describe('custom build update policy', () => {
     })
     const send = vi.fn()
     const updater = await loadUpdaterModule()
-    updater.setupAutoUpdater({
+    const mainWindowMock = {
       isDestroyed: vi.fn().mockReturnValue(false),
       webContents: { isDestroyed: vi.fn().mockReturnValue(false), send }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Updater setup only uses these mocked BrowserWindow methods.
-    } as never)
+    }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Updater setup only uses these mocked BrowserWindow methods.
+    updater.setupAutoUpdater(mainWindowMock as never)
     return { updater, send }
   }
 
