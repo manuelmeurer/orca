@@ -15,13 +15,8 @@ import type { AgentLaunchParams } from '../../../../../shared/rpc-contract/agent
 import { agentLaunchTabViewerRule } from './agent-launch-tab-publication'
 
 /** The paired client whose view this launch should move, or null when it moves the host's. */
-export function agentLaunchCallerNavigationId(
-  target: AgentLaunchTarget,
-  context: Pick<RpcContext, 'caller'>
-): string | null {
-  return target.kind !== 'create-worktree' && context.caller?.kind === 'paired-device'
-    ? context.caller.deviceId
-    : null
+export function agentLaunchCallerNavigationId(context: Pick<RpcContext, 'caller'>): string | null {
+  return context.caller?.kind === 'paired-device' ? context.caller.deviceId : null
 }
 
 /** Bookkeeping, never a gate: the agent already runs, so a failure here only leaves the view as it was. */
@@ -63,7 +58,7 @@ export async function presentAgentLaunchSurface(
   presentation: AgentLaunchParams['presentation'],
   target: AgentLaunchTarget
 ): Promise<void> {
-  const callerNavigationId = agentLaunchCallerNavigationId(target, context)
+  const callerNavigationId = agentLaunchCallerNavigationId(context)
   if (callerNavigationId !== null) {
     if (presentation !== 'background') {
       await selectAgentLaunchTabForCaller(context.runtime, surface, callerNavigationId)

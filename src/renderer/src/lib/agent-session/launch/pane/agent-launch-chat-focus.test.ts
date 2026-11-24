@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeMobileSessionTabsResult } from '../../../../../../shared/runtime-session-contracts'
-import { createTabsSliceMockApi } from '../../../../store/slices/tabs/tabs-slice-test-harness'
+import type { RuntimeMobileSessionTabsResult } from '../../../../../../shared/remote-runtime/session-graph/runtime-session-contracts'
 import { createTestStore } from '../../../../store/testing/app-store-test-fixture'
 import { applyLocalStructuredSessionTabSnapshots } from '../../../../runtime/local-structured-session-tabs-sync/snapshot-apply'
-import { resetLocalStructuredSessionVersionForTests } from '../../../../runtime/local-structured-session-tabs-sync/inventory-generation-fence'
+import {
+  localStructuredSessionEpochHistoryByWorktree,
+  localStructuredSessionVersionByWorktree
+} from '../../../../runtime/local-structured-session-tabs-sync/inventory-generation-fence'
 import { resetWebSessionFocusIntentForTests } from '../../../../runtime/web-session-tabs-sync/navigation/web-session-focus-intent'
-import { resetWebSessionTabsSnapshotFreshnessForTests } from '../../../../runtime/web-session-tabs-sync/tracking-lifecycle'
+import { resetWebSessionTabsSnapshotFreshnessForTests } from '../../../../runtime/web-session-tabs-sync/tracking/tracking-lifecycle'
 
 vi.mock('sonner', () => ({ toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() } }))
 
@@ -32,8 +34,6 @@ vi.mock(
     refreshLocalStructuredSessionWorktreeTabs: refreshWorktreeTabs
   })
 )
-
-createTabsSliceMockApi()
 
 const { focusAgentLaunchChat } = await import('./agent-launch-chat-focus')
 
@@ -104,6 +104,7 @@ function provisionTabs(worktreeId: string): { setupTabId: string } {
 let setupTabId: string
 
 beforeEach(() => {
+  vi.stubGlobal('window', { api: { ui: { set: vi.fn().mockResolvedValue(undefined) } } })
   store = createTestStore()
   testStore.current = store
   refreshWorktreeTabs.mockReset().mockResolvedValue(null)
@@ -112,7 +113,9 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  resetLocalStructuredSessionVersionForTests()
+  vi.unstubAllGlobals()
+  localStructuredSessionEpochHistoryByWorktree.clear()
+  localStructuredSessionVersionByWorktree.clear()
   resetWebSessionFocusIntentForTests()
   resetWebSessionTabsSnapshotFreshnessForTests()
 })
