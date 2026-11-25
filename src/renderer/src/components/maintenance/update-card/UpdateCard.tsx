@@ -102,7 +102,12 @@ export function UpdateCard(): React.JSX.Element | null {
       return
     }
     hasStartedDownload.current = false
-    if (!status.installing && !status.automaticDownload && !status.requiredByTeam) {
+    if (
+      !status.installing &&
+      !status.automaticDownload &&
+      !status.requiredByTeam &&
+      !status.manualUpdateInstructions
+    ) {
       requestInstall(installTarget)
     }
   }, [status, installTarget, requestInstall])
@@ -270,6 +275,7 @@ export function UpdateCard(): React.JSX.Element | null {
       ? 'animate-update-card-exit'
       : 'animate-update-card-enter'
   const showReassurance =
+    !status.manualUpdateInstructions &&
     !reassuranceSeen &&
     ((status.state === 'available' && !status.externallyManaged) || status.state === 'downloading')
   return (

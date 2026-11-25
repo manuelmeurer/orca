@@ -96,6 +96,21 @@ export function UpdateCardStateContent({
   if (errorCard) {
     return <UpdateErrorCardContent {...errorCard} onClose={onCollapse} />
   }
+  if (status.state === 'downloaded' && status.manualUpdateInstructions) {
+    return (
+      <UpdateAvailableSimpleContent
+        version={status.version}
+        releaseUrl={
+          isLocalBuild
+            ? undefined
+            : (status.releaseUrl ?? getReleaseNotesUrlForVersion(status.version))
+        }
+        onUpdate={onUpdate}
+        onClose={onCollapse}
+        manualUpdateInstructions={status.manualUpdateInstructions}
+      />
+    )
+  }
   if (status.state === 'downloaded') {
     if (status.installing) {
       return (
@@ -173,6 +188,7 @@ export function UpdateCardStateContent({
       onMediaLoad={onMediaLoad}
       onUpdate={onUpdate}
       onClose={onDismiss}
+      manualUpdateInstructions={status.manualUpdateInstructions}
       externallyManaged={status.externallyManaged}
     />
   ) : (
@@ -182,6 +198,7 @@ export function UpdateCardStateContent({
       releaseHistory={status.releaseHistory}
       onUpdate={onUpdate}
       onClose={onDismiss}
+      manualUpdateInstructions={status.manualUpdateInstructions}
       externallyManaged={status.externallyManaged}
     />
   )
