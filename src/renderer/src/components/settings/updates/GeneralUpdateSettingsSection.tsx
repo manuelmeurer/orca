@@ -22,6 +22,7 @@ import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
 import { formatUpdateDelayDate } from './update-delay-copy'
 import { useNow } from '@/lib/window-activity/use-now'
 import { isDelayedUpdatePending } from '../../../../../shared/updater/update-delay'
+import { isCustomBuild } from '../../../../../shared/custom-update-policy'
 import { getReleaseNotesUrlForVersion } from '../../../../../shared/updater/release-channel'
 import { openAppHttpLinkFromAnchor } from '@/lib/browser/navigation/app-http-link-open'
 
@@ -143,7 +144,9 @@ export function GeneralUpdateSettingsSection({
             )}
           </Button>
 
-          {updateStatus.state === 'available' && !updateStatus.externallyManaged ? (
+          {updateStatus.state === 'available' &&
+          !updateStatus.manualUpdateInstructions &&
+          !updateStatus.externallyManaged ? (
             <Button
               variant="default"
               size="sm"
@@ -170,6 +173,7 @@ export function GeneralUpdateSettingsSection({
             </Button>
           ) : !showManualRestart &&
             updateStatus.state === 'error' &&
+            !updateStatus.manualUpdateInstructions &&
             updateStatus.retryAction === 'install' &&
             updateStatus.retryable !== false ? (
             <Button variant="default" size="sm" onClick={handleRestartToUpdate} className="gap-2">
@@ -178,6 +182,7 @@ export function GeneralUpdateSettingsSection({
             </Button>
           ) : !showManualRestart &&
             updateStatus.state === 'downloaded' &&
+            !updateStatus.manualUpdateInstructions &&
             !(updateStatus.automaticDownload && updateStatus.installing) ? (
             <Button
               variant="default"
@@ -217,6 +222,8 @@ export function GeneralUpdateSettingsSection({
         )}
         <p className="text-xs text-muted-foreground empty:hidden">
           {updateStatus.state === 'idle' &&
+            appVersion !== null &&
+            !isCustomBuild(appVersion) &&
             t(
               'auto.components.settings.GeneralUpdateSettingsSection.d69a09b672',
               'Updates are checked automatically on launch.'
@@ -228,7 +235,7 @@ export function GeneralUpdateSettingsSection({
             )}
           {updateStatus.state === 'available' && (
             <>
-              {updateStatus.externallyManaged
+              {updateStatus.externallyManaged && !updateStatus.manualUpdateInstructions
                 ? t(
                     'auto.components.settings.GeneralUpdateSettingsSection.externallyManagedVersionAvailable',
                     'Version {{version}} is available. Update Orca through your system package manager — Orca cannot install this release itself.',
@@ -293,19 +300,13 @@ export function GeneralUpdateSettingsSection({
               'Downloading version {{version}} ({{percent}}%)…',
               { version: updateStatus.version, percent: updateStatus.percent }
             )}
-          {updateStatus.state === 'downloaded' && !showManualRestart && (
+          {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
             <>
-              {updateStatus.installing
-                ? t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.versionInstalling',
-                    'Version {{version}} is being installed.',
-                    { version: updateStatus.version }
-                  )
-                : t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.versionReadyToInstall',
-                    'Version {{version}} is ready to install.',
-                    { version: updateStatus.version }
-                  )}
+              {t(
+                'auto.components.settings.GeneralUpdateSettingsSection.versionAvailable',
+                'Version {{version}} is available.',
+                { version: updateStatus.version }
+              )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
                   href={
@@ -314,7 +315,7 @@ export function GeneralUpdateSettingsSection({
                   target="_blank"
                   onClick={openAppHttpLinkFromAnchor}
                   rel="noopener noreferrer"
-                  className="ms-1 whitespace-nowrap underline hover:text-foreground"
+                  className="underline hover:text-foreground"
                 >
                   {t(
                     'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
@@ -324,6 +325,39 @@ export function GeneralUpdateSettingsSection({
               )}
             </>
           )}
+          {updateStatus.state === 'downloaded' &&
+            !showManualRestart &&
+            !updateStatus.manualUpdateInstructions && (
+              <>
+                {updateStatus.installing
+                  ? t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.versionInstalling',
+                      'Version {{version}} is being installed.',
+                      { version: updateStatus.version }
+                    )
+                  : t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.versionReadyToInstall',
+                      'Version {{version}} is ready to install.',
+                      { version: updateStatus.version }
+                    )}
+                {updateStatus.source !== 'local' && (
+                  <a
+                    href={
+                      updateStatus.releaseUrl ?? getReleaseNotesUrlForVersion(updateStatus.version)
+                    }
+                    target="_blank"
+                    onClick={openAppHttpLinkFromAnchor}
+                    rel="noopener noreferrer"
+                    className="ms-1 whitespace-nowrap underline hover:text-foreground"
+                  >
+                    {t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
+                      'Release notes'
+                    )}
+                  </a>
+                )}
+              </>
+            )}
           {updateStatus.state === 'error' &&
             !showManualRestart &&
             (updateStatus.installBlock
@@ -345,10 +379,20 @@ export function GeneralUpdateSettingsSection({
         {updateStatus.state === 'available' && updateStatus.releaseHistory && (
           <UpdateReleaseHistoryPager history={updateStatus.releaseHistory} />
         )}
+        {(updateStatus.state === 'available' || updateStatus.state === 'downloaded') &&
+          updateStatus.manualUpdateInstructions && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {updateStatus.manualUpdateInstructions}
+            </p>
+          )}
       </SearchableSetting>
       {isWebClientLocation() ? null : <AutomaticUpdatesSetting />}
-      <UpdateDelaySetting />
-      {channelSwitcherRevealed ? <ReleaseChannelSection /> : null}
+      <UpdateDelaySetting
+        recheckOnDelayChange={appVersion !== null && !isCustomBuild(appVersion)}
+      />
+      {channelSwitcherRevealed && !isCustomBuild(appVersion ?? '') ? (
+        <ReleaseChannelSection />
+      ) : null}
       <GeneralRemoteServerUpdates />
       {children}
     </SettingsGroup>
