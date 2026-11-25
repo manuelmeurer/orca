@@ -10,6 +10,7 @@ export type UpdaterHandlerContext = {
   getMissingManifestPrereleaseFallbackUserInitiated: () => boolean | null
   getCurrentStatus: () => UpdateStatus
   getActiveUpdateCheckEventAttemptId: () => number | null
+  hasActiveUpdateCheck: () => boolean
   getKnownReleaseUrl: () => string | undefined
   getPendingInstallVersion: () => string
   getUserInitiatedCheck: () => boolean

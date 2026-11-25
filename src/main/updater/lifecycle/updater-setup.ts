@@ -1,5 +1,4 @@
-import { app, powerMonitor } from 'electron'
-import type { BrowserWindow } from 'electron'
+import { app, powerMonitor, type BrowserWindow } from 'electron'
 import type { ReleaseBuild, ReleaseChannel } from '../../../shared/updater/release-channel'
 import type { ReleaseBuildListOptions } from '../releases/updater-release-build-cache'
 import {
@@ -244,6 +243,7 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
         this.getMissingManifestPrereleaseFallbackUserInitiated(),
       getCurrentStatus: () => this.currentStatus,
       getActiveUpdateCheckEventAttemptId: () => this.getActiveUpdateCheckEventAttemptId(),
+      hasActiveUpdateCheck: () => this.activeUpdateCheckAttemptId !== null,
       getKnownReleaseUrl: () => this.getKnownReleaseUrl(),
       getPendingInstallVersion: () => this.getPendingInstallVersion(),
       getUserInitiatedCheck: () => this.userInitiatedCheck,
