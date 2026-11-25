@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { isCustomBuild, CUSTOM_UPDATE_INSTRUCTIONS } from '../../../shared/custom-update-policy'
 import {
   beginMacUpdateDownload,
   deferMacQuitUntilInstallerReady,
@@ -25,6 +26,16 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     trigger: UpdateInstallTrigger = 'manual',
     isCurrentTeamRestart?: () => boolean
   ): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendToMainWindow('updater:quitAndInstallAborted')
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -72,6 +83,14 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     { eligible, backgroundCheck }: { eligible: boolean; backgroundCheck: boolean }
   ): void {
     if (status.state === 'available' && this.holdUpdateForTeamPolicy(status.version)) {
+      return
+    }
+    if (status.state === 'available' && isCustomBuild(app.getVersion())) {
+      this.automaticDownloadOfferVersion = null
+      if (this.autoUpdater) {
+        this.autoUpdater.autoInstallOnAppQuit = false
+      }
+      this.sendStatus(status)
       return
     }
     const required = status.state === 'available' && this.isRequiredTeamUpdate(status.version)
@@ -181,6 +200,15 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
   }
 
   protected downloadUpdate(automatic = false): void {
+    if (isCustomBuild(app.getVersion())) {
+      this.sendStatus({
+        state: 'error',
+        message: CUSTOM_UPDATE_INSTRUCTIONS,
+        retryable: false,
+        userInitiated: true
+      })
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
