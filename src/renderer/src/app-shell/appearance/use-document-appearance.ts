@@ -15,6 +15,7 @@ import {
   paintCodeEditorColors,
   resolveCodeEditorTheme
 } from '../../lib/editor/appearance/code-editor-theme'
+import { paintMonacoDiffColors } from '../../lib/editor/appearance/monaco-diff-colors'
 import { browserColorProbe } from './plugin-theme-tokens'
 import {
   TINTED_HOST_PILL_OUTLINE_MIX_TOKEN,
@@ -151,6 +152,7 @@ export function useDocumentAppearance(): void {
       probe: browserColorProbe
     })
     paintCodeEditorColors(codeEditorTheme.override)
+    paintMonacoDiffColors(codeEditorTheme.monaco)
     useCodeEditorThemeStore.setState(codeEditorTheme)
   }, [appTheme, appPainted, editorTheme, pluginThemesLoaded, theme, dark])
 
