@@ -1,7 +1,10 @@
 import { SourceControlBranchPicker } from '../branches/SourceControlBranchPicker'
 import { BulkActionBar } from '../commit/bulk-action-bar'
 import { SourceControlHeaderToolbar } from './header-toolbar'
-import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
+import {
+  SOURCE_CONTROL_ACTION_CHROME_VISIBLE,
+  SourceControlOverflowOnlyHeader
+} from './action-chrome'
 import { SourceControlNotesShelf } from '../notes/notes-shelf'
 import { SourceControlPanelContent } from './panel-content'
 import { SourceControlPanelDialogs } from './panel-dialogs'
@@ -67,7 +70,7 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
         }
         onKeyDown={handleSourceControlKeyDown}
       >
-        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE && (
+        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE ? (
           <SourceControlHeaderToolbar
             headControl={
               gitIdentityDisplay?.kind === 'branch' ? (
@@ -101,6 +104,19 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
             compareBaseRef={compareBaseRef}
             headDisplay={gitIdentityDisplay}
             manualReviewUrl={manualReviewUrl}
+          />
+        ) : (
+          <SourceControlOverflowOnlyHeader
+            panelActions={{
+              sourceControlViewMode,
+              viewModeToggleDisabled: settings === null,
+              onToggleViewMode: handleToggleSourceControlViewMode,
+              onChangeBaseRef: () => setBaseRefDialogOpen(true),
+              onRefreshBranchCompare: () => void refreshBranchCompare(),
+              branchCompareRefreshDisabled: !branchSummary || branchSummary.status === 'loading',
+              diffCommentCount,
+              onExpandNotes: () => setDiffCommentsExpanded(true)
+            }}
           />
         )}
 
