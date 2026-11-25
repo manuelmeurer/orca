@@ -56,7 +56,7 @@ function Chat({
         agent="codex"
         structuredTransport={structured}
       />
-      <NativeChatSelectionQuote rootRef={rootRef} composerRef={composerRef} enabled quickReplies />
+      <NativeChatSelectionQuote rootRef={rootRef} composerRef={composerRef} enabled />
     </div>
   )
 }

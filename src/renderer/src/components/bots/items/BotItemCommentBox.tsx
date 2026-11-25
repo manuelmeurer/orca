@@ -234,6 +234,8 @@ function BotItemCommentField({
     focus: () => input.current?.focus(),
     focusEnd: caretToEnd,
     ...composerQuoteTarget(composer),
+    // A selection's quick reply sends the comment as the send button does.
+    submit: () => send(),
     type: (typed) => void composer.current?.insertTypedText(typed),
     answer: () => {
       reply.show()
