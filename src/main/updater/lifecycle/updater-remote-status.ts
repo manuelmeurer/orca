@@ -1,3 +1,4 @@
+import { isCustomBuild } from '../../../shared/custom-update-policy'
 import { app } from 'electron'
 import { translateMain } from '../../i18n/main-i18n'
 import type { UpdateCheckOptions, UpdateStatus } from '../../../shared/updater/update-status-types'
@@ -22,6 +23,13 @@ export abstract class UpdaterRemoteStatus extends UpdaterNudge {
         installMode: this.updateInstallMode,
         automatic: false,
         reason: 'unpackaged-build'
+      }
+    }
+    if (isCustomBuild(app.getVersion())) {
+      return {
+        installMode: this.updateInstallMode,
+        automatic: false,
+        reason: 'manual-service-update-required'
       }
     }
     if (!this.autoUpdaterInitialized) {
