@@ -1,7 +1,10 @@
 import { SourceControlBranchPicker } from '../branches/SourceControlBranchPicker'
 import { BulkActionBar } from '../commit/bulk-action-bar'
 import { SourceControlHeaderToolbar } from './header-toolbar'
-import { SOURCE_CONTROL_ACTION_CHROME_VISIBLE } from './action-chrome'
+import {
+  SOURCE_CONTROL_ACTION_CHROME_VISIBLE,
+  SourceControlOverflowOnlyHeader
+} from './action-chrome'
 import { SourceControlNotesShelf } from '../notes/notes-shelf'
 import { SourceControlPanelContent } from './panel-content'
 import { SourceControlPanelDialogs } from './panel-dialogs'
@@ -99,12 +102,21 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
     onFilterExpandedChange: setFilterExpanded
   }
 
+  const operationRow =
+    model.conflictOperation === 'unknown' ? null : (
+      <SourceControlOperationRow model={model} worktreeId={currentWorktreeId} />
+    )
+  const graphControl = isGitHistoryVisible ? (
+    <GitGraphOpenButton worktreeId={currentWorktreeId} support={graphSupport} onOpen={openGraph} />
+  ) : null
+
   // Sits under the commit composer, so it renders inside the scrolling content.
   const fileListHeader = isGitHistoryVisible ? (
     <SourceControlChangeScopeBar
       {...props}
       graphSupported={graphSupport.support === true}
-      filter={embedded ? null : filter}
+      // The custom build hides the file filter with the rest of the action chrome.
+      filter={embedded || !SOURCE_CONTROL_ACTION_CHROME_VISIBLE ? null : filter}
       overflowMenu={
         embedded ? null : (
           <SourceControlHeaderOverflowMenu panelActions={panelActions} triggerClassName="size-5" />
@@ -124,7 +136,7 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
         }
         onKeyDown={handleSourceControlKeyDown}
       >
-        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE && (
+        {SOURCE_CONTROL_ACTION_CHROME_VISIBLE ? (
           <SourceControlHeaderToolbar
             headControl={
               gitIdentityDisplay?.kind === 'branch' ? (
@@ -148,20 +160,15 @@ export function SourceControlPanelReady(props: SourceControlPanelReadyProps) {
             branchLineTotal={branchLineTotal}
             compareBaseRef={compareBaseRef}
             headDisplay={gitIdentityDisplay}
-            operationRow={
-              model.conflictOperation === 'unknown' ? null : (
-                <SourceControlOperationRow model={model} worktreeId={currentWorktreeId} />
-              )
-            }
-            graphControl={
-              isGitHistoryVisible ? (
-                <GitGraphOpenButton
-                  worktreeId={currentWorktreeId}
-                  support={graphSupport}
-                  onOpen={openGraph}
-                />
-              ) : null
-            }
+            operationRow={operationRow}
+            graphControl={graphControl}
+            toolsInFileListHeader={isGitHistoryVisible}
+          />
+        ) : (
+          <SourceControlOverflowOnlyHeader
+            panelActions={panelActions}
+            operationRow={operationRow}
+            graphControl={graphControl}
             toolsInFileListHeader={isGitHistoryVisible}
           />
         )}

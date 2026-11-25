@@ -23,6 +23,8 @@ vi.mock('../listing/content-status', () => ({
     return null
   }
 }))
+// The custom build hides the commit surface; this suite covers the upstream scope gating.
+vi.mock('./action-chrome', () => ({ SOURCE_CONTROL_ACTION_CHROME_VISIBLE: true }))
 vi.mock('./commit-surface', () => ({
   SourceControlCommitSurface: () => <div data-testid="commit-surface" />
 }))
