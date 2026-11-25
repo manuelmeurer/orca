@@ -250,7 +250,6 @@ export function useNativeChatContextMenu({
           rootRef={rootRef}
           composerRef={composerRef}
           enabled={enabled && !(state.open && hasItems)}
-          quickReplies
         />
         <DropdownMenuTrigger asChild>
           <button

@@ -33,7 +33,8 @@ export function useBotItemCommentBoxHandle(
     input,
     composer,
     reply,
-    setDraft
+    setDraft,
+    submit
   }: {
     scopeKey: string
     /** The editor's input, read when a handle method runs. */
@@ -41,6 +42,8 @@ export function useBotItemCommentBoxHandle(
     composer: RefObject<NativeChatComposerHandle | null>
     reply: BotItemReplyMark
     setDraft: (next: string) => void
+    /** Sends the comment as the send button does. */
+    submit: () => void
   }
 ): () => void {
   const caretToEnd = (): void => {
@@ -62,6 +65,7 @@ export function useBotItemCommentBoxHandle(
     focus: () => input()?.focus(),
     focusEnd: caretToEnd,
     ...composerQuoteTarget(composer),
+    submit,
     type: (typed) => void composer.current?.insertTypedText(typed),
     answer: () => {
       reply.show()

@@ -39,14 +39,11 @@ export function composerQuoteTarget(
 export function NativeChatSelectionQuote({
   rootRef,
   composerRef,
-  enabled,
-  quickReplies = false
+  enabled
 }: {
   rootRef: RefObject<HTMLElement | null>
   composerRef: RefObject<NativeChatQuoteTarget | null>
   enabled: boolean
-  /** Replies send through chat's composer; comment boxes only accept quoted text. */
-  quickReplies?: boolean
 }): React.JSX.Element {
   return (
     <SelectionAddToChatPopover
@@ -57,19 +54,15 @@ export function NativeChatSelectionQuote({
       }
       onSelectionSettled={copyTranscriptSelectionOnSelect}
       onAdd={(text) => composerRef.current?.appendText(formatNativeChatQuote(text))}
-      onReply={
-        quickReplies
-          ? (text, reply) => {
-              const composer = composerRef.current
-              if (!composer?.submit) {
-                return
-              }
-              // Rendered first: Send reads the draft the composer last rendered, as Enter does.
-              flushSync(() => composer.appendText(`${formatNativeChatQuote(text)}${reply}`))
-              composer.submit()
-            }
-          : undefined
-      }
+      onReply={(text, reply) => {
+        if (!composerRef.current?.submit) {
+          return
+        }
+        // Rendered first: Send reads the draft the box last rendered, as Enter does.
+        flushSync(() => composerRef.current?.appendText(`${formatNativeChatQuote(text)}${reply}`))
+        // Read again: a box whose handle is rebuilt each render sends from the new one.
+        composerRef.current?.submit?.()
+      }}
     />
   )
 }

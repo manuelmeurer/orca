@@ -229,7 +229,9 @@ function BotItemCommentField({
     input: () => input.current,
     composer,
     reply,
-    setDraft
+    setDraft,
+    // A selection's quick reply sends the comment as the send button does.
+    submit: () => send()
   })
   // The thumbnails' order numbers their pills, as in chat.
   const imageRow = useMemo(() => images.map(({ id }) => id), [images])
