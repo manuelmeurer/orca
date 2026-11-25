@@ -3540,41 +3540,44 @@ html.native-shell .app-layout {
   opacity: 0.92;
 }
 
-/* Why: vs-dark's diff tints are strong olive greens and stack (line + char)
-   across fully added blocks, making green comments unreadable. Keep the tints
-   faint and mark changed lines with a GitHub-style bar. Monaco redeclares these
-   variables on nested .monaco-editor elements, so override both. Leave gutter
-   variables unset: gutter-delete paints the original-side margin of added blocks. */
-.monaco-diff-editor,
-.monaco-diff-editor .monaco-editor {
-  --vscode-diffEditor-insertedLineBackground: color-mix(
-    in srgb,
-    var(--git-decoration-added) 9%,
-    transparent
-  );
+/* Why: the built-in vs / vs-dark diff tints are strong olive greens and stack
+   (line + char) across fully added blocks, making green comments unreadable.
+   Per side, while the editor theme brings no diff backgrounds of its own (it
+   sets data-monaco-theme-diff-inserted / -removed otherwise), fade the tints
+   from the diff tokens. Monaco redeclares these variables on nested
+   .monaco-editor elements, so override both. Leave gutter variables unset:
+   gutter-delete paints the original-side margin of added blocks. */
+html:not([data-monaco-theme-diff-inserted]) .monaco-diff-editor,
+html:not([data-monaco-theme-diff-inserted]) .monaco-diff-editor .monaco-editor {
+  --vscode-diffEditor-insertedLineBackground: color-mix(in srgb, var(--diff-added) 9%, transparent);
   --vscode-diffEditor-insertedTextBackground: color-mix(
     in srgb,
-    var(--git-decoration-added) 10%,
+    var(--diff-added) 10%,
     transparent
   );
+}
+
+html:not([data-monaco-theme-diff-removed]) .monaco-diff-editor,
+html:not([data-monaco-theme-diff-removed]) .monaco-diff-editor .monaco-editor {
   --vscode-diffEditor-removedLineBackground: color-mix(
     in srgb,
-    var(--git-decoration-deleted) 10%,
+    var(--diff-removed) 10%,
     transparent
   );
   --vscode-diffEditor-removedTextBackground: color-mix(
     in srgb,
-    var(--git-decoration-deleted) 12%,
+    var(--diff-removed) 12%,
     transparent
   );
 }
 
+/* Why: GitHub-style bars mark changed lines now that the +/- indicators are hidden. */
 .monaco-diff-editor .line-insert {
-  box-shadow: inset 3px 0 0 var(--git-decoration-added);
+  box-shadow: inset 3px 0 0 var(--diff-added);
 }
 
 .monaco-diff-editor .line-delete {
-  box-shadow: inset 3px 0 0 var(--git-decoration-deleted);
+  box-shadow: inset 3px 0 0 var(--diff-removed);
 }
 
 /* Why: inline deleted lines compete with the new code at full brightness. */
