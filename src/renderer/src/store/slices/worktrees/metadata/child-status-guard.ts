@@ -4,6 +4,7 @@ import type { WorktreeSlice } from '../worktree-slice-contract'
 import type { WorktreeSliceGet } from '../listing/worktree-slice-types'
 import type { WorktreeMetaBatchUpdate } from './worktree-meta-update-options'
 import { getIndexedAllWorktrees } from '../listing/worktree-catalog-index'
+import { selectWorktreesByRepo } from '../../../workspaces/catalog/workspace-record-fields'
 import { getSameStoreLineageParent } from '../../../../../../shared/worktree/lineage/workspace-lineage-graph'
 import { getWorktreeHostIdentity } from '../../../../../../shared/worktree/host-qualified-identity'
 import { DEFAULT_WORKSPACE_STATUS_ID } from '../../../../../../shared/workspace/status/workspace-statuses'
@@ -21,7 +22,7 @@ function statusOf(worktree: Pick<Worktree, 'workspaceStatus'>): string {
 /** Parents and children as the sidebar nests them, by valid same-host links only. */
 function lineageView(state: State) {
   const rows = new Map<string, Worktree>()
-  for (const row of getIndexedAllWorktrees(state.worktreesByRepo)) {
+  for (const row of getIndexedAllWorktrees(selectWorktreesByRepo(state))) {
     rows.set(getWorktreeHostIdentity(row), row)
   }
   const parentOf = (row: Worktree): Worktree | undefined =>
