@@ -6,7 +6,7 @@ import {
 import { getReleaseDownloadUrl } from './updater-release-readiness'
 import { toDelayedUpdate } from './updater-release-delay'
 import { updateDelayDaysToMs } from '../../../shared/updater/update-delay'
-import { isMissingUpdateManifestFailure, isPrereleaseVersion } from './updater-fallback'
+import { isMissingUpdateManifestFailure } from './updater-fallback'
 import { isCustomBuild } from '../../../shared/custom-update-policy'
 import { releaseSelectionPolicy } from './updater-release-policy'
 import { ReleaseFeedPreflightError, type CheckFailureSource } from '../lifecycle/updater-state'

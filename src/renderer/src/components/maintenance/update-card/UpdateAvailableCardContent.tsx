@@ -109,7 +109,7 @@ export function UpdateAvailableRichContent({
         )}
       </p>
       {releaseHistory && <UpdateReleaseHistoryPager history={releaseHistory} />}
-      {!releaseHistory && (
+      {(!releaseHistory || !manualUpdateInstructions) && (
         <button
           type="button"
           className="text-xs text-muted-foreground underline hover:text-foreground self-start"

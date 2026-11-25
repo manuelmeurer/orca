@@ -223,6 +223,7 @@ it('hides the rich update action for custom builds', () => {
 })
 
 it('does not offer restart for a custom build with a downloaded status', () => {
+  mockReducedMotion(true)
   renderWithInitialStatus({
     state: 'downloaded',
     version: '1.4.208',
@@ -231,4 +232,6 @@ it('does not offer restart for a custom build with a downloaded status', () => {
   expect(screen.getByText(CUSTOM_UPDATE_INSTRUCTIONS)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /Restart|Install|^Update$/ })).toBeNull()
   expect(quitAndInstall).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss update' }))
+  expect(screen.queryByRole('complementary', { name: 'Update ready to install' })).toBeNull()
 })

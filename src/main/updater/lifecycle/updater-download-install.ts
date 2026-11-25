@@ -85,6 +85,14 @@ export abstract class UpdaterDownloadInstall extends UpdaterRequiredRestart {
     if (status.state === 'available' && this.holdUpdateForTeamPolicy(status.version)) {
       return
     }
+    if (status.state === 'available' && isCustomBuild(app.getVersion())) {
+      this.automaticDownloadOfferVersion = null
+      if (this.autoUpdater) {
+        this.autoUpdater.autoInstallOnAppQuit = false
+      }
+      this.sendStatus(status)
+      return
+    }
     const required = status.state === 'available' && this.isRequiredTeamUpdate(status.version)
     if (status.state === 'available' && this.autoUpdater && this.implicitInstallOnQuit) {
       this.macTeamDownloadDeferred = this.shouldDeferTeamMacStaging()

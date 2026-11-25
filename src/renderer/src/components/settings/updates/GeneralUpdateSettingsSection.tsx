@@ -235,8 +235,6 @@ export function GeneralUpdateSettingsSection({
             )}
           {updateStatus.state === 'available' && (
             <>
-              {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
-              {updateStatus.version}{' '}
               {updateStatus.externallyManaged && !updateStatus.manualUpdateInstructions
                 ? t(
                     'auto.components.settings.GeneralUpdateSettingsSection.externallyManagedVersionAvailable',
@@ -304,11 +302,10 @@ export function GeneralUpdateSettingsSection({
             )}
           {updateStatus.state === 'downloaded' && updateStatus.manualUpdateInstructions && (
             <>
-              {t('auto.components.settings.GeneralUpdateSettingsSection.a6b37929dc', 'Version')}{' '}
-              {updateStatus.version}{' '}
               {t(
-                'auto.components.settings.GeneralUpdateSettingsSection.8311da27ba',
-                'is available.'
+                'auto.components.settings.GeneralUpdateSettingsSection.versionAvailable',
+                'Version {{version}} is available.',
+                { version: updateStatus.version }
               )}{' '}
               {updateStatus.source !== 'local' && (
                 <a
@@ -331,36 +328,36 @@ export function GeneralUpdateSettingsSection({
           {updateStatus.state === 'downloaded' &&
             !showManualRestart &&
             !updateStatus.manualUpdateInstructions && (
-            <>
-              {updateStatus.installing
-                ? t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.versionInstalling',
-                    'Version {{version}} is being installed.',
-                    { version: updateStatus.version }
-                  )
-                : t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.versionReadyToInstall',
-                    'Version {{version}} is ready to install.',
-                    { version: updateStatus.version }
-                  )}
-              {updateStatus.source !== 'local' && (
-                <a
-                  href={
-                    updateStatus.releaseUrl ?? getReleaseNotesUrlForVersion(updateStatus.version)
-                  }
-                  target="_blank"
-                  onClick={openAppHttpLinkFromAnchor}
-                  rel="noopener noreferrer"
-                  className="ms-1 whitespace-nowrap underline hover:text-foreground"
-                >
-                  {t(
-                    'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
-                    'Release notes'
-                  )}
-                </a>
-              )}
-            </>
-          )}
+              <>
+                {updateStatus.installing
+                  ? t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.versionInstalling',
+                      'Version {{version}} is being installed.',
+                      { version: updateStatus.version }
+                    )
+                  : t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.versionReadyToInstall',
+                      'Version {{version}} is ready to install.',
+                      { version: updateStatus.version }
+                    )}
+                {updateStatus.source !== 'local' && (
+                  <a
+                    href={
+                      updateStatus.releaseUrl ?? getReleaseNotesUrlForVersion(updateStatus.version)
+                    }
+                    target="_blank"
+                    onClick={openAppHttpLinkFromAnchor}
+                    rel="noopener noreferrer"
+                    className="ms-1 whitespace-nowrap underline hover:text-foreground"
+                  >
+                    {t(
+                      'auto.components.settings.GeneralUpdateSettingsSection.8a52ca1d02',
+                      'Release notes'
+                    )}
+                  </a>
+                )}
+              </>
+            )}
           {updateStatus.state === 'error' &&
             !showManualRestart &&
             (updateStatus.installBlock

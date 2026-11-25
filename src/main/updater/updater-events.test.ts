@@ -83,6 +83,7 @@ function createContext(overrides?: Partial<HandlerContext>): HandlerContext {
       () => ({ state: 'downloading', percent: 42, version: '1.0.61' }) as never
     ),
     getActiveUpdateCheckEventAttemptId: vi.fn(() => 1),
+    hasActiveUpdateCheck: vi.fn(() => false),
     getKnownReleaseUrl: vi.fn(() => undefined),
     getPendingInstallVersion: vi.fn(() => '1.0.61'),
     getUserInitiatedCheck: vi.fn(() => false),
@@ -99,9 +100,11 @@ function createContext(overrides?: Partial<HandlerContext>): HandlerContext {
     markMissingManifestPrereleaseFallbackChecking: vi.fn(),
     performQuitAndInstall: vi.fn(),
     commitStagedMacInstall: vi.fn(),
+    finishMacStaging: vi.fn(() => null),
     failMacStaging: vi.fn(),
     isAwaitingMacStaging: vi.fn(() => false),
     isMacStagingDeferredToInstall: vi.fn(() => false),
+    shouldAcceptDownloadedUpdate: vi.fn((_version, obsolete) => !obsolete),
     shouldDeferMacQuitForInstall: vi.fn(() => true),
     recordCompletedUpdateCheck: vi.fn(),
     restoreReleaseUpdateSource: vi.fn(),
@@ -265,7 +268,7 @@ describe('registerAutoUpdaterHandlers release history', () => {
       })
     )
     await vi.waitFor(() => expect(fetchReleaseHistory).toHaveBeenCalledOnce())
-    expect(eventOrder).toEqual(['publish', 'history'])
+    expect(eventOrder).toEqual(['history', 'publish'])
     expect(context.sendStatus).not.toHaveBeenCalled()
     const history: UpdateReleaseHistory = {
       installedVersion: '1.0.51',

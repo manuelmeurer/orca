@@ -106,7 +106,7 @@ export function UpdateCardStateContent({
             : (status.releaseUrl ?? getReleaseNotesUrlForVersion(status.version))
         }
         onUpdate={onUpdate}
-        onClose={onDismiss}
+        onClose={onCollapse}
         manualUpdateInstructions={status.manualUpdateInstructions}
       />
     )

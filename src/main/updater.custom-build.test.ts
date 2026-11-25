@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadUpdaterModule } from './updater/testing/updater-test-module-loader'
+import type { TeamUpdatePolicy } from './updater/releases/updater-release-policy'
 
 const {
   appMock,
@@ -42,7 +43,12 @@ describe('custom build update policy', () => {
     vi.useFakeTimers()
   })
 
-  async function startUpdater() {
+  async function startUpdater(
+    options: {
+      getTeamUpdatePolicy?: () => TeamUpdatePolicy | undefined
+      onTeamUpdatePolicyChanged?: (listener: () => void) => void
+    } = {}
+  ) {
     fetchNewerReleaseTagsMock.mockResolvedValue({ tags: ['v1.0.61'], state: 'ready' })
     autoUpdaterMock.checkForUpdates.mockImplementation(() => {
       autoUpdaterMock.emit('checking-for-update')
@@ -56,7 +62,7 @@ describe('custom build update policy', () => {
       webContents: { isDestroyed: vi.fn().mockReturnValue(false), send }
     }
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Updater setup only uses these mocked BrowserWindow methods.
-    updater.setupAutoUpdater(mainWindowMock as never)
+    updater.setupAutoUpdater(mainWindowMock as never, options)
     return { updater, send }
   }
 
@@ -70,13 +76,15 @@ describe('custom build update policy', () => {
   })
 
   it('never checks in the background, polls nudges, or installs on quit', async () => {
-    const { updater } = await startUpdater()
+    const onTeamUpdatePolicyChanged = vi.fn()
+    const { updater } = await startUpdater({ onTeamUpdatePolicyChanged })
     updater.checkForUpdates()
     appMock.emit('browser-window-focus')
     await vi.advanceTimersByTimeAsync(3 * 24 * 60 * 60 * 1000)
     expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled()
     expect(fetchNudgeMock).not.toHaveBeenCalled()
     expect(powerMonitorOnMock).not.toHaveBeenCalledWith('resume', expect.anything())
+    expect(onTeamUpdatePolicyChanged).not.toHaveBeenCalled()
     expect(autoUpdaterMock.autoInstallOnAppQuit).toBe(false)
     expect(updater.getRemoteServerUpdateSupport()).toMatchObject({
       automatic: false,
@@ -98,6 +106,21 @@ describe('custom build update policy', () => {
     })
     await vi.advanceTimersByTimeAsync(3 * 24 * 60 * 60 * 1000)
     expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a required team release as a manual offer', async () => {
+    const { updater } = await startUpdater({
+      getTeamUpdatePolicy: () => ({ orgIds: ['team'], minimumVersion: '1.0.61' })
+    })
+    updater.checkForUpdatesFromMenu()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(updater.getUpdateStatus()).toMatchObject({
+      state: 'available',
+      version: '1.0.61',
+      manualUpdateInstructions: CUSTOM_UPDATE_INSTRUCTIONS
+    })
+    expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled()
   })
 
   it('reports manual checks that find no upstream update', async () => {
