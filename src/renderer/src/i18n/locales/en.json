@@ -27374,7 +27374,8 @@
     "disabledReason": {
       "needsPermission": "Agent needs permission",
       "approvalUnseen": "Agent may be waiting for approval",
-      "hostUpdateRequired": "Update Orca on this host to send to this agent"
+      "hostUpdateRequired": "Update Orca on this host to send to this agent",
+      "statusStale": "Agent status is stale"
     }
   },
   "wslDistroHold": {

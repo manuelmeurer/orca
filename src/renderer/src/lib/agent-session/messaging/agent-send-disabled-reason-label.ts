@@ -21,6 +21,8 @@ export function agentSendDisabledReasonLabel(reason: string, t: Translate = tran
         'auto.components.editor.ReviewNotesSendMenu.terminalGone',
         'Terminal is no longer available'
       )
+    case 'Agent status is stale':
+      return t('agentSendTargets.disabledReason.statusStale', 'Agent status is stale')
     default:
       return reason
   }

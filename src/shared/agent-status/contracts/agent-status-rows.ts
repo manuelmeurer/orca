@@ -12,6 +12,20 @@ export function agentStatusEntries(
   }
   return isAgentStatusMap(rows) ? rows.entries() : Object.entries(rows)
 }
+
+export function agentStatusEntryForKey(
+  rows: AgentStatusRows | null | undefined,
+  paneKey: string
+): AgentStatusEntry | undefined {
+  if (!rows) {
+    return undefined
+  }
+  if (isAgentStatusMap(rows)) {
+    return rows.get(paneKey)
+  }
+  return Object.hasOwn(rows, paneKey) ? rows[paneKey] : undefined
+}
+
 export function agentStatusValues(rows: AgentStatusRows | null | undefined): AgentStatusEntry[] {
   return Array.from(agentStatusEntries(rows), ([, entry]) => entry)
 }

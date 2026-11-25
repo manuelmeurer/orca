@@ -6,6 +6,10 @@ import type { AppState } from '@/store/types'
 import { deriveRunningAgentSendTargets } from '@/lib/agent-session/messaging/running-agent-targets'
 import { recomputeOn } from '@/lib/recompute-on'
 import { selectSendApprovalGuardEnvironmentIds } from '@/runtime/hosts/capabilities/send-approval-guard-hosts'
+import {
+  EMPTY_PANE_FOREGROUND_AGENTS,
+  selectPaneForegroundAgentsForWorktree
+} from '@/components/sidebar/workspace-card/activity/worktree-card-status-inputs'
 
 // Why: selectors that opt out of a slice must return one stable reference, or every store tick looks like a change.
 const EMPTY_AGENT_STATUS_BY_PANE_KEY: AppState['agentStatusByPaneKey'] = acceptedAgentStatuses()
@@ -41,6 +45,11 @@ export function useAgentSendTargetWorktreeId(): string | null {
   const agentTargetRuntimePaneTitlesByTabId = useAppStore((s) =>
     agentSendPopoverTargetMode ? s.runtimePaneTitlesByTabId : EMPTY_RUNTIME_PANE_TITLES_BY_TAB_ID
   )
+  const agentTargetPaneForegroundAgentByPaneKey = useAppStore((s) =>
+    agentSendPopoverTargetMode
+      ? selectPaneForegroundAgentsForWorktree(s, agentSendPopoverTargetMode.worktreeId)
+      : EMPTY_PANE_FOREGROUND_AGENTS
+  )
   const agentTargetGuardedHosts = useAppStoreWithHostStatuses((_s, statuses) =>
     agentSendPopoverTargetMode ? selectSendApprovalGuardEnvironmentIds(statuses) : NO_GUARDED_HOSTS
   )
@@ -58,6 +67,7 @@ export function useAgentSendTargetWorktreeId(): string | null {
             terminalLayoutsByTabId: agentTargetTerminalLayoutsByTabId,
             ptyIdsByTabId: agentTargetPtyIdsByTabId,
             runtimePaneTitlesByTabId: agentTargetRuntimePaneTitlesByTabId,
+            paneForegroundAgentByPaneKey: agentTargetPaneForegroundAgentByPaneKey,
             sendApprovalGuardEnvironmentIds: agentTargetGuardedHosts
           },
           agentSendPopoverTargetMode.worktreeId
@@ -76,6 +86,7 @@ export function useAgentSendTargetWorktreeId(): string | null {
       agentTargetTerminalLayoutsByTabId,
       agentTargetPtyIdsByTabId,
       agentTargetRuntimePaneTitlesByTabId,
+      agentTargetPaneForegroundAgentByPaneKey,
       agentTargetGuardedHosts
     ]
   )

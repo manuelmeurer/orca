@@ -4,8 +4,17 @@ import type {
   AgentStatusEntry,
   AgentType
 } from '../../../../../shared/agent-status/contracts/agent-status-types'
+import {
+  agentStatusEntries,
+  agentStatusEntryForKey
+} from '../../../../../shared/agent-status/contracts/agent-status-rows'
+import {
+  AGENT_STATUS_STALE_AFTER_MS,
+  isAgentStatusFresh
+} from '../../../../../shared/agent-status/contracts/agent-status-freshness'
 import type { TerminalTab } from '../../../../../shared/workspace-layout/terminal-tab-types'
 import { isRemoteRuntimePtyId } from '../../../../../shared/remote-runtime/remote-runtime-pty-id'
+import { isRemoteExecutionHostPtyId } from '../../../../../shared/execution-host/remote-execution-host-pty-id'
 import { makePaneKey, parsePaneKey } from '../../../../../shared/workspace-layout/stable-pane-id'
 import { structuredAgentSessionPaneKey } from '../../../../../shared/agent-session/view/structured-agent-session-projection'
 import { isStructuredTab } from '../../../../../shared/agent-session/view/structured-agent-session-tab'
@@ -27,7 +36,7 @@ export type RunningAgentTargetState = Pick<
   | 'terminalLayoutsByTabId'
   | 'ptyIdsByTabId'
 > &
-  Partial<Pick<AppState, 'runtimePaneTitlesByTabId'>> & {
+  Partial<Pick<AppState, 'runtimePaneTitlesByTabId' | 'paneForegroundAgentByPaneKey'>> & {
     /** Selected instead of the whole host-status map so unrelated host updates don't rescan targets;
      *  absent, the host status owner's current map decides. */
     sendApprovalGuardEnvironmentIds?: ReadonlySet<string>
@@ -76,10 +85,11 @@ export function runningAgentSendTargetAgentType(
 
 export function deriveRunningAgentSendTargets(
   state: RunningAgentTargetState,
-  worktreeId: string
+  worktreeId: string,
+  now = Date.now()
 ): RunningAgentSendTarget[] {
   return [
-    ...deriveTerminalAgentSendTargets(state, worktreeId),
+    ...deriveTerminalAgentSendTargets(state, worktreeId, now),
     ...deriveStructuredAgentSendTargets(state, worktreeId, 'with-status')
   ]
 }
@@ -94,7 +104,8 @@ export function deriveStatuslessStructuredAgentSendTargets(
 
 function deriveTerminalAgentSendTargets(
   state: RunningAgentTargetState,
-  worktreeId: string
+  worktreeId: string,
+  now: number
 ): TerminalAgentSendTarget[] {
   const tabs = state.tabsByWorktree[worktreeId] ?? []
   if (tabs.length === 0) {
@@ -104,7 +115,7 @@ function deriveTerminalAgentSendTargets(
   const tabsById = new Map(tabs.map((tab) => [tab.id, tab]))
   const targets: TerminalAgentSendTarget[] = []
 
-  for (const [paneKey, entry] of Array.from(state.agentStatusByPaneKey.entries())) {
+  for (const [paneKey, entry] of agentStatusEntries(state.agentStatusByPaneKey)) {
     const parsed = parsePaneKey(paneKey)
     if (!parsed) {
       continue
@@ -120,10 +131,10 @@ function deriveTerminalAgentSendTargets(
       layoutPtyId && state.ptyIdsByTabId?.[parsed.tabId]?.includes(layoutPtyId) ? layoutPtyId : null
     let disabledReason: string | undefined
 
-    // Idle agents emit no hooks, so row age never disables a live pane; the host's process/screen check gates the send.
     const liveTitle = ptyId ? resolveLeafTitle(state, parsed.tabId, parsed.leafId, tab.title) : null
     const liveTitleStatus = liveTitle === null ? null : detectAgentSendTitleStatus(liveTitle)
-    // An unanswered prompt sends no further hooks and idle titles can persist under open dialogs, so only the agent's next report clears it.
+    const liveForegroundAgent =
+      resolveSendTargetForegroundAgent(state, paneKey, ptyId, tab) !== null
     if (!ptyId) {
       disabledReason = 'Terminal is no longer available'
     } else if (
@@ -132,8 +143,16 @@ function deriveTerminalAgentSendTargets(
       liveTitleStatus === 'permission'
     ) {
       disabledReason = 'Agent needs permission'
+    } else if (
+      isLocalForegroundTrackingPane(state, paneKey, tab, ptyId) &&
+      (entry.restoredUnconfirmed ||
+        (!isAgentStatusFresh(entry, now, AGENT_STATUS_STALE_AFTER_MS) &&
+          liveTitleStatus === null &&
+          !liveForegroundAgent))
+    ) {
+      disabledReason = 'Agent status is stale'
     } else {
-      disabledReason = hookSilentAgentSendRefusal(state, tab, ptyId, entry, liveTitle)
+      disabledReason = hookSilentAgentSendRefusal(state, tab, ptyId, entry, paneKey, liveTitle)
     }
 
     targets.push({
@@ -159,12 +178,12 @@ function deriveStructuredAgentSendTargets(
   status: 'with-status' | 'without-status'
 ): StructuredAgentSendTarget[] {
   const targets: StructuredAgentSendTarget[] = []
-  for (const tab of state.unifiedTabsByWorktree[worktreeId] ?? []) {
+  for (const tab of state.unifiedTabsByWorktree?.[worktreeId] ?? []) {
     if (!isStructuredTab(tab) || !tab.agentSessionAgent) {
       continue
     }
     const paneKey = structuredAgentSessionPaneKey(tab.id, tab.entityId)
-    const entry = state.agentStatusByPaneKey.get(paneKey) ?? null
+    const entry = agentStatusEntryForKey(state.agentStatusByPaneKey, paneKey) ?? null
     if ((entry !== null) !== (status === 'with-status')) {
       continue
     }
@@ -210,15 +229,17 @@ export function launchAgentMayOwnPane(tab: Pick<TerminalTab, 'ptyId'>, ptyId: st
 /** Why a pane that may run an agent whose hooks report working through approval menus can't take a paste and Enter now. */
 export function hookSilentAgentSendRefusal(
   state: RunningAgentTargetState,
-  tab: Pick<TerminalTab, 'ptyId' | 'launchAgent'>,
+  tab: Pick<TerminalTab, 'ptyId' | 'launchAgent' | 'shellOverride'>,
   ptyId: string,
   entry: Pick<AgentStatusEntry, 'state' | 'agentType'> | null | undefined,
+  paneKey: string,
   leafTitle: string | null
 ): string | undefined {
   // Every identity counts: a row another agent left behind can't vouch for the one running now.
   const sendState = hookSilentPaneSendState(entry, [
     launchAgentMayOwnPane(tab, ptyId) ? tab.launchAgent : null,
-    leafTitle === null ? null : resolveTerminalTitleAgentType(leafTitle)
+    leafTitle === null ? null : resolveTerminalTitleAgentType(leafTitle),
+    resolveSendTargetForegroundAgent(state, paneKey, ptyId, tab)
   ])
   if (sendState === 'none') {
     return undefined
@@ -230,6 +251,46 @@ export function hookSilentAgentSendRefusal(
     return 'Update Orca on this host to send to this agent'
   }
   return sendState === 'unproven' ? 'Agent may be waiting for approval' : undefined
+}
+
+export function resolveSendTargetForegroundAgent(
+  state: RunningAgentTargetState,
+  paneKey: string,
+  ptyId: string | null,
+  tab: Pick<TerminalTab, 'shellOverride'>
+): AgentType | null {
+  if (!ptyId || !isLocalForegroundTrackingPane(state, paneKey, tab, ptyId)) {
+    return null
+  }
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  if (
+    !foreground?.agent ||
+    foreground.agentEvidence === 'launch-record' ||
+    foreground.shellForeground === true
+  ) {
+    return null
+  }
+  return foreground.agent
+}
+
+function isLocalForegroundTrackingPane(
+  state: RunningAgentTargetState,
+  paneKey: string,
+  tab: Pick<TerminalTab, 'shellOverride'>,
+  ptyId: string
+): boolean {
+  if (
+    isRemoteExecutionHostPtyId(ptyId) ||
+    /(?:^|[/\\])wsl(?:\.exe)?$/i.test(tab.shellOverride ?? '')
+  ) {
+    return false
+  }
+  if (typeof navigator === 'undefined' || !navigator.userAgent.includes('Windows')) {
+    return true
+  }
+  // Why: Windows tracking skips WSL, so an absent native sample must preserve its prior behavior.
+  const foreground = state.paneForegroundAgentByPaneKey?.[paneKey]
+  return foreground?.agentEvidence === 'process-read' || foreground?.shellForeground === true
 }
 
 /** The pane's refusal for a send that bypasses the target list, such as the focused terminal. */
@@ -249,7 +310,8 @@ export function terminalPaneSendRefusal(
     state,
     tab,
     ptyId,
-    state.agentStatusByPaneKey.get(makePaneKey(tabId, leafId)),
+    agentStatusEntryForKey(state.agentStatusByPaneKey, makePaneKey(tabId, leafId)),
+    makePaneKey(tabId, leafId),
     resolveLeafTitle(state, tabId, leafId, tab.title)
   )
 }
@@ -257,7 +319,10 @@ export function terminalPaneSendRefusal(
 export function resolveRunningAgentSendTarget(
   state: RunningAgentTargetState,
   worktreeId: string,
-  paneKey: string
+  paneKey: string,
+  now = Date.now()
 ): RunningAgentSendTarget | null {
-  return deriveRunningAgentSendTargets(state, worktreeId).find((t) => t.paneKey === paneKey) ?? null
+  return (
+    deriveRunningAgentSendTargets(state, worktreeId, now).find((t) => t.paneKey === paneKey) ?? null
+  )
 }
