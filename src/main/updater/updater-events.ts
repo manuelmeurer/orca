@@ -31,6 +31,7 @@ export function registerAutoUpdaterHandlers({
   getMissingManifestPrereleaseFallbackUserInitiated,
   getCurrentStatus,
   getActiveUpdateCheckEventAttemptId,
+  hasActiveUpdateCheck,
   getKnownReleaseUrl,
   getPendingInstallVersion,
   getUserInitiatedCheck,
@@ -178,14 +179,15 @@ export function registerAutoUpdaterHandlers({
             backgroundCheck: !wasUserInitiated && !getUserInitiatedCheck()
           }
         )
+        const offeredStatus = getCurrentStatus()
         void releaseHistory?.then((history) => {
           const status = getCurrentStatus()
           // Attach only while this offer is still shown and no newer check could be cut short.
           if (
             history &&
             status.state === 'available' &&
-            status.version === info.version &&
-            getActiveUpdateCheckEventAttemptId() === null
+            status === offeredStatus &&
+            !hasActiveUpdateCheck()
           ) {
             sendStatus({ ...status, releaseHistory: history })
           }
