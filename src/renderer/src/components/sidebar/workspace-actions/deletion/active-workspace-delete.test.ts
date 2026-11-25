@@ -123,4 +123,30 @@ describe('workspace delete shortcut', () => {
     expect(deleteActiveWorkspaceFromShortcut(state)).toBe(false)
     expect(openModal).not.toHaveBeenCalled()
   })
+
+  it('never deletes a folder workspace', () => {
+    state.activeWorktreeId = 'folder:notes'
+    state.worktreesByRepo = { [repo.id]: [{ ...active, id: 'folder:notes' }] }
+    expect(deleteActiveWorkspaceFromShortcut(state)).toBe(false)
+    state.activeWorktreeId = active.id
+    state.worktreesByRepo = { [repo.id]: [active] }
+    state.repos = [{ ...repo, kind: 'folder' }]
+    expect(deleteActiveWorkspaceFromShortcut(state)).toBe(false)
+    expect(openModal).not.toHaveBeenCalled()
+    expect(mocks.runWorktreeDeleteWithToast).not.toHaveBeenCalled()
+  })
+
+  it('ignores a folder project with the same id on another host', () => {
+    const local = { ...active, hostId: 'local' as const }
+    state.worktreesByRepo = { [repo.id]: [local] }
+    state.repos = [
+      { ...repo, executionHostId: 'local' },
+      { ...repo, kind: 'folder', executionHostId: 'ssh:box' }
+    ]
+    expect(deleteActiveWorkspaceFromShortcut(state)).toBe(true)
+    expect(mocks.runWorktreeDeleteWithToast).toHaveBeenCalledWith(
+      expect.objectContaining({ id: active.id }),
+      active.displayName
+    )
+  })
 })
