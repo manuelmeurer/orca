@@ -21,7 +21,10 @@ function copyTranscriptSelectionOnSelect(root: HTMLElement): void {
 }
 
 /** A box a selection is quoted into: chat's composer, or an item's comment box. */
-export type NativeChatQuoteTarget = Pick<NativeChatComposerHandle, 'acceptsText' | 'appendText'>
+export type NativeChatQuoteTarget = Pick<
+  NativeChatComposerHandle,
+  'acceptsText' | 'appendText' | 'submit'
+>
 
 /** The quote target of a box built on chat's composer. */
 export function composerQuoteTarget(
@@ -36,11 +39,14 @@ export function composerQuoteTarget(
 export function NativeChatSelectionQuote({
   rootRef,
   composerRef,
-  enabled
+  enabled,
+  quickReplies = false
 }: {
   rootRef: RefObject<HTMLElement | null>
   composerRef: RefObject<NativeChatQuoteTarget | null>
   enabled: boolean
+  /** Replies send through chat's composer; comment boxes only accept quoted text. */
+  quickReplies?: boolean
 }): React.JSX.Element {
   return (
     <SelectionAddToChatPopover
@@ -51,15 +57,19 @@ export function NativeChatSelectionQuote({
       }
       onSelectionSettled={copyTranscriptSelectionOnSelect}
       onAdd={(text) => composerRef.current?.appendText(formatNativeChatQuote(text))}
-      onReply={(text, reply) => {
-        const composer = composerRef.current
-        if (!composer?.submit) {
-          return
-        }
-        // Rendered first: Send reads the draft the composer last rendered, as Enter does.
-        flushSync(() => composer.appendText(`${formatNativeChatQuote(text)}${reply}`))
-        composer.submit()
-      }}
+      onReply={
+        quickReplies
+          ? (text, reply) => {
+              const composer = composerRef.current
+              if (!composer?.submit) {
+                return
+              }
+              // Rendered first: Send reads the draft the composer last rendered, as Enter does.
+              flushSync(() => composer.appendText(`${formatNativeChatQuote(text)}${reply}`))
+              composer.submit()
+            }
+          : undefined
+      }
     />
   )
 }

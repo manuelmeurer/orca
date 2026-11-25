@@ -22853,7 +22853,9 @@
         "sampleCall": "Sample call",
         "sampleNote": "Starts a real run",
         "send": "Send"
-      }
+      },
+      "replyYesToSelection": "Reply yes",
+      "replyNoToSelection": "Reply no"
     },
     "tab": {
       "bar": {
