@@ -20,6 +20,7 @@ vi.mock('../releases/updater-prerelease-feed', () => ({
   fetchNewerReleaseTagsWithReadiness: async () => ({ state: 'ready', tags: [`v${version}`] })
 }))
 vi.mock('../releases/updater-changelog', () => ({ fetchChangelog: async () => null }))
+vi.mock('../releases/updater-release-history', () => ({ fetchReleaseHistory: async () => null }))
 
 const version = '1.4.273'
 const jsUpdater = Object.assign(new EventEmitter(), {
